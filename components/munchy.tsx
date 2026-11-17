@@ -1,12 +1,14 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowDownRight, ArrowLeft, ArrowRight, Check, ChevronDown, Clock3, Crosshair, Flame, Heart, Minus, Plus, ShoppingBag, Sparkles, X } from 'lucide-react';
+import { ArrowDownRight, ArrowLeft, ArrowRight, Check, ChevronDown, Clock3, Crosshair, Flame, Heart, Minus, Plus, ShoppingBag, Sparkles, UserCheck, X } from 'lucide-react';
 import Image from 'next/image';
-import { FormEvent, Fragment, useMemo, useState } from 'react';
+import { FormEvent, Fragment, useEffect, useMemo, useState } from 'react';
 import { en } from '@/locales/en';
 import { useSiteContent } from '@/components/content-provider';
 import { useCart } from '@/lib/cart';
+import { useLocale } from '@/lib/locale';
+import { getBusinessStatus } from '@/lib/business-hours';
 import RestaurantExperience from '@/components/restaurant-experience';
 import { SiteFooter } from '@/components/site-chrome';
 
@@ -20,6 +22,7 @@ const Reveal = ({ children, delay = 0, className = '' }: { children: React.React
 
 export default function Munchy() {
   const en = useSiteContent();
+  const { locale, setLocale } = useLocale();
   const categories = en.menu.categories;
   const featuredProduct = en.products.find((product) => product.available !== false) || en.products[0];
   const { items, points, addItem, changeQuantity, removeItem, earnPoints, clear } = useCart();
@@ -44,6 +47,27 @@ export default function Munchy() {
   const [receiptTotal, setReceiptTotal] = useState(0);
   const [receiptPoints, setReceiptPoints] = useState(0);
   const [receipt, setReceipt] = useState(false);
+
+  // Customer details auto-fill
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
+  const [savedFound, setSavedFound] = useState(false);
+  const [businessStatus, setBusinessStatus] = useState({ isOpen: true, badgeText: 'OPEN NOW', timingText: 'At your door in ~25 min' });
+
+  useEffect(() => {
+    setBusinessStatus(getBusinessStatus());
+    try {
+      const saved = localStorage.getItem('munchy_customer');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.name) setCustomerName(parsed.name);
+        if (parsed.phone) setCustomerPhone(parsed.phone);
+        if (parsed.address) setCustomerAddress(parsed.address);
+        setSavedFound(true);
+      }
+    } catch {}
+  }, []);
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const delivery = fulfillment === 'pickup' || subtotal === 0 || subtotal >= en.contact.freeDeliveryFrom ? 0 : en.contact.deliveryFee;
@@ -82,10 +106,10 @@ export default function Munchy() {
   const submitOrder = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); setCheckoutError(''); setCheckoutSubmitting(true);
     const form = new FormData(event.currentTarget);
-    const name = String(form.get('name') || '').trim();
-    const rawPhone = String(form.get('phone') || '').replace(/[\s-]/g, '');
+    const name = String(form.get('name') || customerName).trim();
+    const rawPhone = String(form.get('phone') || customerPhone).replace(/[\s-]/g, '');
     const phone = rawPhone.startsWith('+212') ? rawPhone : `+212${rawPhone}`;
-    const address = String(form.get('address') || '').trim();
+    const address = String(form.get('address') || customerAddress).trim();
     if (!name || (fulfillment === 'delivery' && !address) || !/^\+212[67]\d{8}$/.test(phone)) { setCheckoutError(en.ui.checkoutError); setCheckoutSubmitting(false); return; }
     const changeFor = String(form.get('change') || 'Exact change').match(/100|200/)?.[0] || 'exact';
     try {
@@ -95,6 +119,9 @@ export default function Munchy() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || en.ui.orderSubmitError);
+      try {
+        localStorage.setItem('munchy_customer', JSON.stringify({ name, phone: phone.replace('+212', ''), address }));
+      } catch {}
       setOrderCode(result.orderCode); setWhatsappUrl(result.whatsappUrl); setReceiptTotal(result.total); setReceiptPoints(result.pointsEarned); earnPoints(result.pointsEarned);
       setReceipt(true); setCheckoutOpen(false);
     } catch (error) {
@@ -112,8 +139,32 @@ export default function Munchy() {
         <a href="/catering" onClick={() => setMobileMenu(false)}>{en.nav.catering}</a>
         <a href="/track" onClick={() => setMobileMenu(false)}>{en.nav.track}</a><a href="/help" onClick={() => setMobileMenu(false)}>Help</a>
         <button onClick={() => { setBuilderOpen(true); setMobileMenu(false); }}>{en.nav.build}</button>
+        <div className="mobile-locale-picker">
+          {(['en', 'fr', 'ar'] as const).map((lang) => (
+            <button
+              key={lang}
+              type="button"
+              className={locale === lang ? 'active' : ''}
+              onClick={() => { setLocale(lang); setMobileMenu(false); }}
+            >
+              {lang === 'en' ? 'EN' : lang === 'fr' ? 'FR' : 'عربي'}
+            </button>
+          ))}
+        </div>
       </nav>
       <div className="nav-actions">
+        <div className="lang-switcher" role="group" aria-label="Language">
+          {(['en', 'fr', 'ar'] as const).map((lang) => (
+            <button
+              key={lang}
+              type="button"
+              className={locale === lang ? 'lang-btn active' : 'lang-btn'}
+              onClick={() => setLocale(lang)}
+            >
+              {lang === 'en' ? 'EN' : lang === 'fr' ? 'FR' : 'عربي'}
+            </button>
+          ))}
+        </div>
         <span className="points"><Sparkles size={14} /> {points} pts</span>
         <button className="nav-order" onClick={() => setCartOpen(true)}>{en.nav.order}<span className="cart-nav-icon"><ShoppingBag size={17} />{quantity > 0 && <i>{quantity}</i>}</span></button>
       </div>
@@ -126,7 +177,7 @@ export default function Munchy() {
         <div className="hero-title-wrap"><h1>{en.hero.title[0]}<br /><span>{en.hero.title[1]}</span></h1></div>
         <p className="hero-intro">{en.hero.body}</p>
         <div className="hero-buttons"><a className="button button-red" href="/menu">{en.hero.primary}<ArrowRight size={17} /></a><button className="button button-light" onClick={() => setBuilderOpen(true)}>{en.hero.secondary}<ArrowDownRight size={17} /></button></div>
-        <div className="hero-meta"><span className="status-pill"><i></i>{en.hero.open}</span><span><Clock3 size={15} />{en.hero.delivery}</span><span className="hero-dot">·</span><span>{en.ui.city}</span></div>
+        <div className="hero-meta"><span className="status-pill"><i></i>{businessStatus.badgeText}</span><span><Clock3 size={15} />{businessStatus.timingText}</span><span className="hero-dot">·</span><span>{en.ui.city}</span></div>
       </div>
       <div className="hero-visual">
         <div className="hero-image-frame"><Image src={en.presentation.heroImage || featuredProduct.image} alt={featuredProduct.name} fill priority sizes="(max-width: 700px) 88vw, 42vw" quality={82} /><span className="photo-caption">{en.ui.heroPhotoCaption.split('\n').map((line) => <span key={line}>{line}<br /></span>)}</span></div>
@@ -190,9 +241,10 @@ export default function Munchy() {
           <button type="button" className={fulfillment === 'delivery' ? 'fulfillment-choice active' : 'fulfillment-choice'} onClick={() => setFulfillment('delivery')}><span>{en.fulfillment.delivery}</span><small>{formatDh(delivery)}</small></button>
           <button type="button" className={fulfillment === 'pickup' ? 'fulfillment-choice active' : 'fulfillment-choice'} onClick={() => setFulfillment('pickup')}><span>{en.fulfillment.pickup}</span><small>{en.contact.pickupMinutes} min</small></button>
         </div>
-        <label>{en.checkout.name}<input name="name" autoComplete="name" required placeholder={en.ui.namePlaceholder} /></label>
-        <label>{en.checkout.phone}<div className="phone-field"><span>+212</span><input name="phone" inputMode="tel" autoComplete="tel-national" required placeholder={en.ui.phonePlaceholder} pattern="\+212[67][0-9]{8}|[67][0-9]{8}" title={en.ui.phoneTitle} /></div></label>
-        {fulfillment === 'delivery' ? <><label>{en.checkout.address}<textarea name="address" required placeholder={en.ui.addressPlaceholder} rows={2} /></label><button className={gps ? 'gps-button gps-done' : 'gps-button'} type="button" onClick={shareLocation} disabled={gpsBusy}>{gps ? <Check size={15} /> : <Crosshair size={15} />}{gps ? en.ui.locationAttached : gpsBusy ? en.ui.locationBusy : en.checkout.gps}</button></> : <p className="pickup-note">{en.checkout.pickupNote}<br /><b>{en.contact.address}</b></p>}
+        {savedFound && <span className="saved-badge" style={{ fontSize: '10px', color: '#46a878', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px' }}><UserCheck size={12} /> Details remembered</span>}
+        <label>{en.checkout.name}<input name="name" autoComplete="name" required value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder={en.ui.namePlaceholder} /></label>
+        <label>{en.checkout.phone}<div className="phone-field"><span>+212</span><input name="phone" inputMode="tel" autoComplete="tel-national" required value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ''))} placeholder={en.ui.phonePlaceholder} pattern="\+212[67][0-9]{8}|[67][0-9]{8}" title={en.ui.phoneTitle} /></div></label>
+        {fulfillment === 'delivery' ? <><label>{en.checkout.address}<textarea name="address" required value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} placeholder={en.ui.addressPlaceholder} rows={2} /></label><button className={gps ? 'gps-button gps-done' : 'gps-button'} type="button" onClick={shareLocation} disabled={gpsBusy}>{gps ? <Check size={15} /> : <Crosshair size={15} />}{gps ? en.ui.locationAttached : gpsBusy ? en.ui.locationBusy : en.checkout.gps}</button></> : <p className="pickup-note">{en.checkout.pickupNote}<br /><b>{en.contact.address}</b></p>}
         <div className="payment-choice"><span>{en.checkout.payment}</span><div><span className="cod-icon"><Check size={14} /></span><b>{en.checkout.cod}</b><small>{en.fulfillment.driverCash}</small></div></div>
         <label className="select-label">{en.checkout.change}<span className="select-wrap"><select name="change">{en.ui.changeOptions.map((option) => <option key={option}>{option}</option>)}</select><ChevronDown size={15} /></span></label>
         {checkoutError && <p className="form-error" role="alert">{checkoutError}</p>}

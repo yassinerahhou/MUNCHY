@@ -282,3 +282,80 @@ h1,h2,h3 { text-wrap:balance; }.section-top h2,.combo-copy h2,.club-left h2,.pag
 @media(max-width:900px) { .product-page-full .product-detail-grid { gap:30px; }.meal-option-group > div { grid-template-columns:1fr; }.hero-dish-card { left:13px;right:13px;bottom:15px;padding:13px; } }
 @media(max-width:700px) { .product-page-full { padding:24px 20px 70px; }.product-page-full .catalog-breadcrumb { flex-wrap:wrap;font-size:10px;gap:6px; }.product-page-full .product-detail-grid { grid-template-columns:1fr;gap:30px; }.product-visual-column { position:static; }.product-page-full .product-detail-image { aspect-ratio:1.1;min-height:0; }.dish-photo-note { font-size:8px;left:9px;right:9px;bottom:9px; }.product-service-cards { gap:8px; }.product-service-cards > div { padding:13px; }.product-service-cards b { font-size:11px; }.product-service-cards span { font-size:10px; }.product-page-full .product-detail-copy h1 { font-size:59px; }.product-page-full .detail-description { font-size:14px;line-height:1.8; }.dish-flags { gap:5px; }.meal-option-group > div { grid-template-columns:1fr 1fr; }.meal-option { padding:9px;grid-template-columns:15px 1fr;gap:4px 7px; }.meal-option > span { font-size:11px; }.meal-option b { grid-column:2; }.meal-config-heading h2 { font-size:35px; }.product-page-full .detail-purchase { flex-wrap:nowrap;gap:9px; }.product-page-full .detail-purchase .button { min-width:0;font-size:10px;padding:0 10px; }.product-page-full .detail-quantity button { min-width:32px;width:32px; }.product-page-full .detail-quantity > span { min-width:20px; }.dish-added { flex-wrap:wrap;font-size:10px; }.dish-details-section { grid-template-columns:1fr;gap:10px;margin-top:45px;padding:30px 0; }.dish-details-section h2 { font-size:43px; }.dish-detail-panels ul { grid-template-columns:1fr;gap:9px; }.product-page-full .related-heading { gap:10px;align-items:end; }.product-page-full .related-heading h2 { font-size:31px; }.product-page-full .related-heading > a { font-size:10px; }.product-page-full .related-grid { grid-template-columns:1fr 1fr;gap:16px 12px; }.product-page-full .related-card > b { font-size:21px; }.product-page-full .related-card > span { font-size:8px; }.hero-visual { min-height:500px; }.hero-image-frame { height:475px; }.hero-dish-card { bottom:30px;left:12px;right:12px;padding:13px 14px; }.hero-dish-card h2 { font-size:29px; }.hero-price-note { bottom:-8px;left:-10px; }.hero-price-note b { font-size:31px; }.hero-dish-card > span { font-size:7px; }.hero-dish-card p { font-size:11px; } }
 .addon-quantity { display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:12px;padding:10px 12px;background:var(--ivory);border:1px solid var(--line); }.addon-quantity > span { margin-right:auto;font-size:11px;font-weight:750; }.addon-quantity button { width:36px;height:36px;min-width:36px;border:1px solid var(--espresso);background:var(--cream);display:grid;place-items:center;cursor:pointer;border-radius:3px; }.addon-quantity button:disabled { opacity:.35; }.addon-quantity > b { min-width:18px;text-align:center;font-size:13px; }
+
+
+/* Language Switcher */
+.lang-switcher { display:inline-flex;align-items:center;border:1.5px solid var(--espresso);border-radius:24px;padding:2px 3px;gap:2px;background:var(--ivory); }
+.lang-btn { border:0;background:transparent;border-radius:18px;padding:4px 8px;font-size:10px;font-weight:800;color:#625d56;cursor:pointer;transition:all .15s ease;line-height:1; }
+.lang-btn:hover { color:var(--espresso); }
+.lang-btn.active { background:var(--espresso);color:var(--cream);box-shadow:0 1px 3px rgba(0,0,0,.15); }
+.mobile-locale-picker { display:flex;gap:8px;margin-top:15px;padding-top:15px;border-top:1px solid var(--line); }
+.mobile-locale-picker button { flex:1;border:1px solid var(--espresso);border-radius:4px;padding:8px 10px;background:var(--ivory);font-size:12px;font-weight:800;cursor:pointer; }
+.mobile-locale-picker button.active { background:var(--espresso);color:var(--cream); }
+
+/* RTL layout support for Arabic */
+html[dir="rtl"] { direction:rtl;text-align:right; }
+html[dir="rtl"] .ticker-runner span { margin-right:0;margin-left:29px; }
+html[dir="rtl"] .main-nav { margin-left:0;margin-right:70px; }
+html[dir="rtl"] .hero-visual { margin-right:0;margin-left:2vw; }
+html[dir="rtl"] .hero-spark { right:auto;left:12%; }
+html[dir="rtl"] .hero-price-note { left:auto;right:-14px; }
+html[dir="rtl"] .hero-sticker { right:auto;left:-1vw; }
+html[dir="rtl"] .hero-index { right:auto;left:4vw; }
+html[dir="rtl"] .text-link:hover svg { transform:translateX(-4px); }
+html[dir="rtl"] .quick-add { right:auto;left:12px; }
+html[dir="rtl"] .product-tag { left:auto;right:12px; }
+html[dir="rtl"] .phone-field span { border-right:0;border-left:1px solid var(--line); }
+html[dir="rtl"] .admin-orders-heading { text-align:right; }
+
+/* Admin Operational Tools */
+.admin-tool-btn { display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--cream);padding:7px 11px;font-size:10px;font-weight:800;cursor:pointer;border-radius:4px;transition:all .15s ease; }
+.admin-tool-btn:hover { border-color:var(--espresso);background:var(--ivory); }
+.ticket-print-btn { display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border:1px solid var(--line);background:var(--cream);border-radius:3px;font-size:9px;font-weight:750;cursor:pointer; }
+.ticket-print-btn:hover { background:var(--espresso);color:var(--cream); }
+.whatsapp-contact-link { display:inline-flex;align-items:center;gap:4px;color:#25d366;font-size:9px;font-weight:800;text-decoration:none;background:rgba(37,211,102,.1);padding:3px 7px;border-radius:3px; }
+.whatsapp-contact-link:hover { background:rgba(37,211,102,.2); }
+
+/* Checkout Customer Auto-Save & Club Redemption */
+.saved-badge { display:inline-flex;align-items:center;gap:4px;color:#3b875c;font-size:10px;font-weight:800;background:rgba(59,135,92,.1);padding:3px 8px;border-radius:3px; }
+.club-redemption-card { background:#fffdf5;border:1.5px dashed var(--saffron);padding:14px;border-radius:4px;margin-bottom:18px; }
+.redemption-checkbox { display:flex;align-items:center;gap:12px;cursor:pointer; }
+.redemption-checkbox input { width:18px;height:18px;accent-color:var(--paprika);cursor:pointer; }
+.redemption-checkbox > div { display:flex;flex-direction:column;gap:2px;flex:1; }
+.redemption-title { font-size:12px;font-weight:800;display:flex;align-items:center;gap:5px;color:var(--espresso); }
+.redemption-checkbox small { color:#756d62;font-size:10px; }
+.redemption-checkbox > b { color:var(--paprika);font-size:14px;font-weight:800; }
+.discount-line { color:var(--paprika);font-weight:800; }
+
+/* Thermal Receipt (KOT - Kitchen Order Ticket) */
+.thermal-receipt-container { display:none; }
+@media print {
+  body * { visibility:hidden; }
+  .thermal-receipt-container, .thermal-receipt-container * { visibility:visible; }
+  .thermal-receipt-container {
+    display:block !important;
+    position:fixed;
+    top:0;
+    left:0;
+    width:76mm;
+    max-width:80mm;
+    padding:3mm 2mm;
+    margin:0 auto;
+    font-family:'Courier New', Courier, monospace;
+    color:#000;
+    background:#fff;
+    font-size:11px;
+    line-height:1.25;
+  }
+  .thermal-header { text-align:center;margin-bottom:6px; }
+  .thermal-header h2 { font-size:13px;font-weight:bold;margin:0 0 3px; }
+  .thermal-header p { font-size:10px;margin:2px 0; }
+  .thermal-meta p { margin:2px 0;font-size:10px; }
+  .thermal-items table { width:100%;border-collapse:collapse;margin:4px 0;font-size:10px; }
+  .thermal-items th { border-bottom:1px dashed #000;padding-bottom:3px; }
+  .thermal-items td { padding:2px 0; }
+  .thermal-totals p { margin:2px 0;font-size:10px; }
+  .thermal-totals h3 { font-size:13px;margin:4px 0;font-weight:bold; }
+  .thermal-footer { text-align:center;font-size:9px;margin-top:6px; }
+  hr { border:0;border-top:1px dashed #000;margin:4px 0; }
+}

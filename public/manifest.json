@@ -1,0 +1,18 @@
+{
+  "name": "Munchy Casablanca · Snack & Smash Burgers",
+  "short_name": "Munchy",
+  "description": "Direct-order Casablanca snack shop in Maârif. Smash burgers, French tacos, and loaded snacks.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF7F2",
+  "theme_color": "#E63926",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

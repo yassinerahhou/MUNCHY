@@ -96,11 +96,13 @@ export async function POST(request: NextRequest) {
   if (!items) return fail('One or more menu items could not be verified. Refresh the menu and try again.');
   const subtotal = items.reduce((total, line) => total + line.unitPrice * line.quantity, 0);
   const deliveryFee = fulfillment === 'pickup' || subtotal >= en.contact.freeDeliveryFrom ? 0 : en.contact.deliveryFee;
+  const discount = Boolean(data.redeemPoints) ? 10 : 0;
+  const total = Math.max(0, subtotal + deliveryFee - discount);
   let code = '';
   do { code = `MC-${randomBytes(3).toString('hex').toUpperCase()}`; } while (await findOrder(code));
   const order: OrderRecord = {
     code, name, phone, address: address || 'Pickup at Munchy Kitchen', locationUrl: locationUrl || undefined,
-    items, fulfillment, payment: 'cash_on_delivery', changeFor, subtotal, deliveryFee, total: subtotal + deliveryFee,
+    items, fulfillment, payment: 'cash_on_delivery', changeFor, subtotal, deliveryFee, total,
     status: 'received', createdAt: new Date().toISOString(),
   };
   try { await createOrder(order); }
@@ -109,7 +111,8 @@ export async function POST(request: NextRequest) {
     return fail('Ordering is temporarily unavailable. Please call the kitchen and try again shortly.', 503);
   }
   const details = items.map((item) => `• ${item.quantity} × ${item.name} — ${item.unitPrice * item.quantity} DH`).join('\n');
-  const message = `Hi Munchy! Please confirm order ${code}.\n\n${details}\n\n${en.cart.subtotal}: ${subtotal} DH\n${en.cart.delivery}: ${deliveryFee ? `${deliveryFee} DH` : 'FREE'}\n${en.cart.total}: ${order.total} DH\n\nName: ${name}\nPhone: ${phone}\n${fulfillment === 'delivery' ? `Address: ${order.address}${locationUrl ? `\nMap: ${locationUrl}` : ''}` : 'Pickup from the Munchy kitchen'}\nCash on delivery${changeFor === 'exact' ? '' : `, change from ${changeFor} DH`}.`;
+  const discountLine = discount > 0 ? `\nClub Munchy Reward: -${discount} DH` : '';
+  const message = `Hi Munchy! Please confirm order ${code}.\n\n${details}\n\n${en.cart.subtotal}: ${subtotal} DH\n${en.cart.delivery}: ${deliveryFee ? `${deliveryFee} DH` : 'FREE'}${discountLine}\n${en.cart.total}: ${order.total} DH\n\nName: ${name}\nPhone: ${phone}\n${fulfillment === 'delivery' ? `Address: ${order.address}${locationUrl ? `\nMap: ${locationUrl}` : ''}` : 'Pickup from the Munchy kitchen'}\nCash on delivery${changeFor === 'exact' ? '' : `, change from ${changeFor} DH`}.`;
   const whatsappNumber = (process.env.MUNCHY_WHATSAPP_NUMBER || en.contact.phone).replace(/\D/g, '');
   const waBase = whatsappNumber ? `https://wa.me/${whatsappNumber}` : 'https://wa.me/';
   return NextResponse.json({ orderCode: code, status: order.status, subtotal, deliveryFee, total: order.total, pointsEarned: Math.floor(subtotal / 10) * 10, whatsappUrl: `${waBase}?text=${encodeURIComponent(message)}` }, { status: 201 });
