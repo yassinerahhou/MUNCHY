@@ -1,0 +1,3 @@
+from pathlib import Path
+p=Path('lib/content-types.ts');s=p.read_text(encoding='utf-8');s="import { productProfiles } from '@/lib/product-profiles';\n"+s;s=s.replace('({ ...product, available: true,', '({ ...product, ...productProfiles[product.id], available: true,');p.write_text(s,encoding='utf-8')
+p=Path('components/menu-client.tsx');s=p.read_text(encoding='utf-8').replace("import { en }", "import { supportsMealOptions } from '@/lib/product-options';\nimport { en }");s=s.replace('<a className="quick-detail-link" href={`/menu/${quickView.id}`}>{en.catalog.fullDetails}', '<a className="quick-detail-link" href={`/menu/${quickView.id}`}>{supportsMealOptions(quickView) ? \'Choose sauce, sides & soda\' : en.catalog.fullDetails}');p.write_text(s,encoding='utf-8')
