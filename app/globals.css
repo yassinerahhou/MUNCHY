@@ -289,9 +289,7 @@ h1,h2,h3 { text-wrap:balance; }.section-top h2,.combo-copy h2,.club-left h2,.pag
 .lang-btn { border:0;background:transparent;border-radius:18px;padding:4px 8px;font-size:10px;font-weight:800;color:#625d56;cursor:pointer;transition:all .15s ease;line-height:1; }
 .lang-btn:hover { color:var(--espresso); }
 .lang-btn.active { background:var(--espresso);color:var(--cream);box-shadow:0 1px 3px rgba(0,0,0,.15); }
-.mobile-locale-picker { display:flex;gap:8px;margin-top:15px;padding-top:15px;border-top:1px solid var(--line); }
-.mobile-locale-picker button { flex:1;border:1px solid var(--espresso);border-radius:4px;padding:8px 10px;background:var(--ivory);font-size:12px;font-weight:800;cursor:pointer; }
-.mobile-locale-picker button.active { background:var(--espresso);color:var(--cream); }
+.mobile-locale-picker { display:none!important; }
 
 /* RTL layout support for Arabic */
 html[dir="rtl"] { direction:rtl;text-align:right; }

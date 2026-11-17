@@ -25,18 +25,6 @@ export function SiteHeader() {
         <a href="/catering" onClick={() => setOpen(false)}>{en.nav.catering}</a>
         <a href="/track" onClick={() => setOpen(false)}>{en.nav.track}</a>
         <a href="/help" onClick={() => setOpen(false)}>Delivery & help</a>
-        <div className="mobile-locale-picker">
-          {(['en', 'fr', 'ar'] as const).map((lang) => (
-            <button
-              key={lang}
-              type="button"
-              className={locale === lang ? 'active' : ''}
-              onClick={() => { setLocale(lang); setOpen(false); }}
-            >
-              {lang === 'en' ? 'EN' : lang === 'fr' ? 'FR' : 'عربي'}
-            </button>
-          ))}
-        </div>
       </nav>
       <div className="nav-actions">
         <div className="lang-switcher" role="group" aria-label="Language">

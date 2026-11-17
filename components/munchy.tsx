@@ -24,9 +24,10 @@ export default function Munchy() {
   const en = useSiteContent();
   const { locale, setLocale } = useLocale();
   const categories = en.menu.categories;
+  const canonicalCategories = ['Everything', 'Smash burgers', 'French tacos', 'Sandwiches & panini', 'Pizzas', 'Pasticcio & salads', 'Loaded fries', 'Sides & sips', 'Sauces & extras'];
   const featuredProduct = en.products.find((product) => product.available !== false) || en.products[0];
   const { items, points, addItem, changeQuantity, removeItem, earnPoints, clear } = useCart();
-  const [category, setCategory] = useState<string>(categories[0]);
+  const [selectedCategoryIndex, setSelectedCategoryIndex] = useState(0);
   const [cartOpen, setCartOpen] = useState(false);
   const [builderOpen, setBuilderOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -72,7 +73,7 @@ export default function Munchy() {
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const delivery = fulfillment === 'pickup' || subtotal === 0 || subtotal >= en.contact.freeDeliveryFrom ? 0 : en.contact.deliveryFee;
   const quantity = items.reduce((sum, item) => sum + item.quantity, 0);
-  const visibleProducts = category === categories[0] ? en.products.filter((item) => item.available !== false) : en.products.filter((item) => item.available !== false && item.category.toLowerCase() === category.toLowerCase());
+  const visibleProducts = selectedCategoryIndex === 0 ? en.products.filter((item) => item.available !== false) : en.products.filter((item) => item.available !== false && item.category.toLowerCase() === canonicalCategories[selectedCategoryIndex].toLowerCase());
   const steps = [
     { key: 'base', title: 'Pick your base', note: 'The beginning of a very good idea.' },
     { key: 'protein', title: 'Choose your protein', note: 'Go crispy, beefy, or properly spiced.' },
@@ -139,18 +140,6 @@ export default function Munchy() {
         <a href="/catering" onClick={() => setMobileMenu(false)}>{en.nav.catering}</a>
         <a href="/track" onClick={() => setMobileMenu(false)}>{en.nav.track}</a><a href="/help" onClick={() => setMobileMenu(false)}>Help</a>
         <button onClick={() => { setBuilderOpen(true); setMobileMenu(false); }}>{en.nav.build}</button>
-        <div className="mobile-locale-picker">
-          {(['en', 'fr', 'ar'] as const).map((lang) => (
-            <button
-              key={lang}
-              type="button"
-              className={locale === lang ? 'active' : ''}
-              onClick={() => { setLocale(lang); setMobileMenu(false); }}
-            >
-              {lang === 'en' ? 'EN' : lang === 'fr' ? 'FR' : 'عربي'}
-            </button>
-          ))}
-        </div>
       </nav>
       <div className="nav-actions">
         <div className="lang-switcher" role="group" aria-label="Language">
@@ -192,7 +181,7 @@ export default function Munchy() {
 
     <section className="menu-section section-pad" id="menu">
       <div className="section-top"><Reveal><p className="section-label"><span>01</span> {en.menu.label}</p><h2>{en.menu.title.split('\n').map((line) => <span key={line}>{line}<br /></span>)}</h2></Reveal><Reveal delay={.1}><p className="section-desc">{en.menu.body}</p><button className="text-link" onClick={openMatcher}>{en.ui.menuHelp} <ArrowRight size={16} /></button></Reveal></div>
-      <div className="menu-toolbar"><div className="category-list" role="tablist" aria-label={en.ui.categoryFilter}>{categories.map((item) => <button role="tab" aria-selected={category === item} key={item} className={category === item ? 'category active' : 'category'} onClick={() => { setCategory(item); requestAnimationFrame(() => document.getElementById('home-menu-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}>{item}</button>)}</div><span className="menu-counter">{en.ui.productCount.replace('{count}', String(visibleProducts.length).padStart(2, '0'))}</span></div>
+      <div className="menu-toolbar"><div className="category-list" role="tablist" aria-label={en.ui.categoryFilter}>{categories.map((item, idx) => <button role="tab" aria-selected={selectedCategoryIndex === idx} key={idx} className={selectedCategoryIndex === idx ? 'category active' : 'category'} onClick={() => { setSelectedCategoryIndex(idx); requestAnimationFrame(() => document.getElementById('home-menu-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}>{item}</button>)}</div><span className="menu-counter">{en.ui.productCount.replace('{count}', String(visibleProducts.length).padStart(2, '0'))}</span></div>
       <motion.div className="product-grid" id="home-menu-results" layout>{visibleProducts.slice(0, 6).map((product, index) => <motion.article className="product-card" key={product.id} layout initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: .35, delay: index * .04 }}>
         <div className={`product-image ${product.tone}`}><Image src={product.image} alt={product.name} fill sizes="(max-width: 700px) 92vw, 30vw" quality={78} /><span className="product-tag">{product.tag}</span><button aria-label={`Add ${product.name}`} className="quick-add" onClick={() => addProduct(product)}><Plus size={20} /></button></div>
         <div className="product-info"><div><span className="product-category">{product.category}</span><h3><a href={`/menu/${product.id}`}>{product.name}</a></h3></div><b className="product-price">{formatDh(product.price)}</b></div><p className="product-description">{product.description}</p><button className="add-line" onClick={() => addProduct(product)}>{en.ui.addToOrder} <Plus size={15} /></button>
