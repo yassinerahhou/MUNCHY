@@ -1,51 +1,10 @@
 'use client';
+import EditorialHeader from '@/components/editorial-header';
 
-import { ArrowRight, Clock3, ShoppingBag, Sparkles, MapPin, Phone, Globe } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { ArrowRight, Clock3, MapPin, Phone } from 'lucide-react';
 import { useSiteContent } from '@/components/content-provider';
-import { useCart } from '@/lib/cart';
-import { useLocale } from '@/lib/locale';
 
-export function SiteHeader() {
-  const en = useSiteContent();
-  const { locale, setLocale } = useLocale();
-  const [open, setOpen] = useState(false);
-  const [ready, setReady] = useState(false);
-  const { items, points } = useCart();
-  const count = items.reduce((total, item) => total + item.quantity, 0);
-  useEffect(() => setReady(true), []);
-
-  return <>
-    <div className="ticker"><div className="ticker-runner">{Array.from({ length: 3 }, (_, index) => <span key={index}>{en.announcement}<b>—</b></span>)}</div></div>
-    <header className="nav-wrap">
-      <a className="brand" href="/" aria-label={en.ui.homeLabel}><span className="brand-name">{en.branding.name}<span className="logo-period">.</span></span></a>
-      <nav className={open ? 'main-nav open' : 'main-nav'} aria-label={en.ui.mainNavigation}>
-        <a href="/menu" onClick={() => setOpen(false)}>{en.nav.menu}</a>
-        <a href="/story" onClick={() => setOpen(false)}>{en.nav.story}</a>
-        <a href="/catering" onClick={() => setOpen(false)}>{en.nav.catering}</a>
-        <a href="/track" onClick={() => setOpen(false)}>{en.nav.track}</a>
-        <a href="/help" onClick={() => setOpen(false)}>Delivery & help</a>
-      </nav>
-      <div className="nav-actions">
-        <div className="lang-switcher" role="group" aria-label="Language">
-          {(['en', 'fr', 'ar'] as const).map((lang) => (
-            <button
-              key={lang}
-              type="button"
-              className={locale === lang ? 'lang-btn active' : 'lang-btn'}
-              onClick={() => setLocale(lang)}
-            >
-              {lang === 'en' ? 'EN' : lang === 'fr' ? 'FR' : 'عربي'}
-            </button>
-          ))}
-        </div>
-        <span className="points"><Sparkles size={14} /> {ready ? points : 0} pts</span>
-        <a className="nav-order" href="/menu#cart" onClick={(event) => { if (window.location.pathname === "/menu") { event.preventDefault(); window.dispatchEvent(new Event("munchy:cart")); } }}>{en.nav.order}<span className="cart-nav-icon"><ShoppingBag size={17} />{ready && count > 0 && <i>{count}</i>}</span></a>
-      </div>
-      <button className="menu-toggle" aria-label={en.ui.navToggle} aria-expanded={open} onClick={() => setOpen((value) => !value)}><span></span><span></span></button>
-    </header>
-  </>;
-}
+export function SiteHeader() { return <EditorialHeader />; }
 
 export function SiteFooter() {
   const en = useSiteContent();
@@ -57,6 +16,7 @@ export function SiteFooter() {
       <div className="footer-column"><span>{en.ui.footerExplore}</span><a href="/menu">{en.nav.menu}</a><a href="/story">{en.nav.story}</a><a href="/catering">{en.nav.catering}</a><a href="/track">{en.nav.track}</a><a href="/help">Delivery & help</a></div>
     </div>
     <div className="site-footer-bottom"><span>{en.ui.footerCity}</span><span>{en.ui.footerDirect}</span><span>{en.ui.copyright}</span><a href="/help">Contact the kitchen <ArrowRight size={14} /></a></div>
+    <div className="agency-credit">Digital Experience crafted by <a href={process.env.NEXT_PUBLIC_AGENCY_URL || '/agency'}>Elite Digital House</a></div>
   </footer>;
 }
 

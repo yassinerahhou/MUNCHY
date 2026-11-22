@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowDownRight, ArrowLeft, ArrowRight, Check, ChevronDown, Clock3, Crosshair, Flame, Heart, Minus, Plus, ShoppingBag, Sparkles, UserCheck, X } from 'lucide-react';
-import Image from 'next/image';
+import Image from '@/components/food-image';
 import { FormEvent, Fragment, useEffect, useMemo, useState } from 'react';
 import { en } from '@/locales/en';
 import { useSiteContent } from '@/components/content-provider';
@@ -60,7 +60,7 @@ export default function Munchy() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [savedFound, setSavedFound] = useState(false);
-  const [businessStatus, setBusinessStatus] = useState({ isOpen: true, badgeText: 'OPEN NOW', timingText: 'At your door in ~25 min' });
+  const [businessStatus, setBusinessStatus] = useState<ReturnType<typeof getBusinessStatus>>({ isOpen: false, closesAt: '', nextOpening: null, badgeText: 'CHECK HOURS', timingText: 'Kitchen confirmation required' });
 
   useEffect(() => {
     try {

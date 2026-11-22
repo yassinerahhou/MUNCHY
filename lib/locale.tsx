@@ -34,6 +34,7 @@ export function applyLocaleToContent(base: SiteContent, locale: Locale): SiteCon
 
   return {
     ...base,
+    products: base.products.map(product => ({ ...product, description: base.menuCopy?.[locale]?.[product.id] || product.description })),
     announcement: target.announcement,
     nav: target.nav,
     hero: {
@@ -100,8 +101,8 @@ export function categoryLabel(category: string, locale: Locale) {
   return index < 0 ? category : locales[locale].menu.categories[index] || category;
 }
 
-export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>('en');
+export function LocaleProvider({ children, initialLocale = 'en' }: { children: React.ReactNode; initialLocale?: Locale }) {
+  const [locale, setLocaleState] = useState<Locale>(initialLocale);
 
   useEffect(() => {
     try {
@@ -118,10 +119,11 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 
   const setLocale = (newLocale: Locale) => {
     setLocaleState(newLocale);
+    document.documentElement.lang = newLocale;
+    document.documentElement.dir = newLocale === 'ar' ? 'rtl' : 'ltr';
     try {
       localStorage.setItem('munchy_locale', newLocale);
-      document.documentElement.lang = newLocale;
-      document.documentElement.dir = newLocale === 'ar' ? 'rtl' : 'ltr';
+      document.cookie = `munchy_locale=${newLocale}; Path=/; Max-Age=31536000; SameSite=Lax`;
     } catch {
       // ignore
     }

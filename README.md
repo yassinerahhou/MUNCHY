@@ -74,3 +74,12 @@ The homepage product grid includes the scroll anchor used by category filters. C
 Main meals now have configurable sauce, extra, side and drink choices. Drinks and sides have independent quantities from one to six per meal. The main meal quantity is capped at ten. Different configurations use separate cart IDs. Checkout revalidates the catalog item, option names and option quantities, calculates all prices server-side, and includes the selections in kitchen tickets, tracking item names and WhatsApp summaries.
 
 Manage global choices and prices under **Admin → Pages, copy & settings → Meal options**. Product editors also include ingredients, portion text, allergen information and a photo caption. Product pages display these details, price breakdowns, pickup/delivery information, related items and cash payment guidance. Product photos use 28 distinct seed assets; generated serving concepts are labeled. The test suite includes product customization and multi-drink totals (eight checks overall).
+
+
+## Editorial hospitality release (2026-11-22)
+
+The current home uses Cormorant Garamond, Barlow Condensed, DM Sans and IBM Plex Sans Arabic, maintained Lenis, shared-element dish dialogs, a sticky signature gallery and native mobile swipe layout. Site-wide carts support modifiers, kitchen notes, snapshot sharing and live group ordering. New routes: /reserve, /gift, /review, /build and /agency. Admin's hospitality inbox manages reservation/gift requests, feedback and club opt-ins.
+
+Import all six tables from db/schema.sql before production launch. Read START-HERE.md and docs/HOSTINGER-DEPLOY.md. Google reviews, geofencing and signed POS webhooks require the optional environment configuration described there. No paid gift balance, guaranteed reservation, payment gateway, fake reviews or guaranteed rewards are implied by a request receipt.
+
+Verification commands: npm test, npm run test:release, npm run build, node tests/production-check.mjs. Generate the source ZIP with npm run package:release. Local development remains at http://localhost:3000.

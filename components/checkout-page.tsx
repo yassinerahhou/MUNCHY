@@ -1,20 +1,25 @@
 'use client';
 
 import { ArrowLeft, ArrowRight, Check, Crosshair, MapPin, Plus, ShieldCheck, ShoppingBag, Sparkles, UserCheck } from 'lucide-react';
-import Image from 'next/image';
+import Image from '@/components/food-image';
 import { FormEvent, useEffect, useState } from 'react';
 import { useSiteContent } from '@/components/content-provider';
 import { useCart } from '@/lib/cart';
+import { deliveryQuote, isPeak } from '@/lib/hospitality';
+import { track } from '@/lib/analytics';
+import { useExperienceCopy } from '@/lib/experience-copy';
 
 const money = (price: number) => `${price} DH`;
 type Confirmation = { code: string; total: number; whatsappUrl: string };
 
 export default function CheckoutPage() {
   const en = useSiteContent();
-  const { items, points, changeQuantity, removeItem, earnPoints, clear } = useCart();
+  const t = useExperienceCopy();
+  const { items, points, changeQuantity, removeItem, earnPoints, remember, clear } = useCart();
   const [hydrated, setHydrated] = useState(false);
   const [fulfillment, setFulfillment] = useState<'delivery' | 'pickup'>('delivery');
   const [gps, setGps] = useState('');
+  const [manualPin, setManualPin] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
@@ -43,7 +48,9 @@ export default function CheckoutPage() {
   }, []);
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const delivery = fulfillment === 'pickup' || subtotal >= en.contact.freeDeliveryFrom ? 0 : en.contact.deliveryFee;
+  const coords = gps ? new URL(gps).searchParams.get('q')?.split(',').map(Number) : null;
+  const quote = deliveryQuote(coords?.length === 2 ? { lat: coords[0], lng: coords[1] } : null, subtotal, en.contact);
+  const delivery = fulfillment === 'pickup' ? 0 : quote.fee;
   const discount = 0;
   const grandTotal = Math.max(0, subtotal + delivery - discount);
 
@@ -83,7 +90,7 @@ export default function CheckoutPage() {
           locationUrl: gps,
           fulfillment,
           changeFor,
-          items: items.map(({ id, productId, selections, quantity, customization }) => ({ id, productId, selections, quantity, customization }))
+          items: items.map(({ id, productId, selections, quantity, customization, kitchenNotes, spice }) => ({ id, productId, selections, quantity, customization, kitchenNotes, spice }))
         })
       });
       const result = await response.json();
@@ -96,7 +103,7 @@ export default function CheckoutPage() {
 
       earnPoints(result.pointsEarned);
       setConfirmation({ code: result.orderCode, total: result.total, whatsappUrl: result.whatsappUrl });
-      clear();
+      remember(); clear();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : en.ui.orderSubmitError);
@@ -115,7 +122,7 @@ export default function CheckoutPage() {
         <p>{en.ui.receiptBody}</p>
         <div className="order-code"><span>{en.ui.orderCodeLabel}</span><strong>{confirmation.code}</strong></div>
         <div className="checkout-success-actions">
-          <a className="button button-red" href={confirmation.whatsappUrl} target="_blank" rel="noopener noreferrer">{en.ui.whatsapp}<ArrowRight size={17} /></a>
+          <a className="button button-red" href={confirmation.whatsappUrl} data-analytics="whatsapp_order" onClick={() => track('whatsapp_order')} target="_blank" rel="noopener noreferrer">{en.ui.whatsapp}<ArrowRight size={17} /></a>
           <a className="button button-light" href={`/track?code=${confirmation.code}`}>{en.ui.trackOrder}<ArrowRight size={16} /></a>
         </div>
         <p className="checkout-note">{en.ui.receiptNote}</p>
@@ -204,6 +211,9 @@ export default function CheckoutPage() {
                   {gps ? <Check size={15} /> : <Crosshair size={15} />}
                   {gps ? en.ui.locationAttached : busy ? en.ui.locationBusy : en.checkout.gps}
                 </button>
+                {quote.configured && <p className={quote.outside ? 'exp-error' : 'delivery-zone-note'}>{quote.outside ? 'Outside our delivery radius. Choose pickup or contact the kitchen.' : quote.distance !== null ? `${quote.distance} km from the kitchen · ${quote.fee} DH delivery` : 'Share your location to check our delivery area. A typed address alone cannot validate distance.'}</p>}
+                <details className="manual-location"><summary>{t.manualPin}</summary><p>{t.pinHint}</p><div><input aria-label={t.manualPin} placeholder="33.58, -7.63" value={manualPin} onChange={event => setManualPin(event.target.value)} /><button type="button" onClick={() => { const parts = manualPin.trim().split(',').map(value => Number(value.trim())); if (parts.length !== 2 || parts.some(value => !Number.isFinite(value)) || !manualPin.includes(',') || Math.abs(parts[0]) > 90 || Math.abs(parts[1]) > 180) { setError(t.pinHint); return; } setGps(`https://maps.google.com/?q=${parts[0]},${parts[1]}`); setError(''); }}>{t.applyPin}</button></div></details>
+                {hydrated && isPeak() && <p className="delivery-zone-note">Busy kitchen: allow about 15 extra minutes after confirmation.</p>}
               </>}
             </section>
 

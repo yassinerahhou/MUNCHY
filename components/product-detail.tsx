@@ -1,14 +1,19 @@
 'use client';
-import Image from 'next/image';
+import Image from '@/components/food-image';
 import { ArrowLeft, ArrowRight, Check, Minus, Plus, ShoppingBag, Clock3, Bike, PackageCheck, ShieldCheck, Flame } from 'lucide-react';
 import { useState } from 'react';
 import { useSiteContent } from '@/components/content-provider';
 import { useCart } from '@/lib/cart';
 import { configuredProduct, supportsMealOptions, type Selection } from '@/lib/product-options';
 import type { Product } from '@/lib/content-types';
+import { useExperience } from '@/components/experience-provider';
+import { useExperienceCopy } from '@/lib/experience-copy';
 
-export default function ProductDetail({ product, related }: { product: Product; related: Product[] }) {
+export default function ProductDetail({ product: sourceProduct, related }: { product: Product; related: Product[] }) {
   const en = useSiteContent();
+  const product = en.products.find(p => p.id === sourceProduct.id) || sourceProduct;
+  const { openDish } = useExperience();
+  const t = useExperienceCopy();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   const [choices, setChoices] = useState<Record<string, string>>({});
@@ -34,6 +39,7 @@ export default function ProductDetail({ product, related }: { product: Product; 
       <div className="product-visual-column"><div className={`product-detail-image ${product.tone}`}><Image src={product.image} alt={product.name} fill priority sizes="(max-width: 700px) 92vw, 48vw" quality={82} /><span>{product.tag}</span><small className="dish-photo-note">{product.photoNote || 'Serving suggestion · illustrative menu photography'}</small></div><div className="product-photo-caption"><span>{en.branding.name} / THE MENU</span><b>{product.category}</b></div><div className="product-service-cards"><div><Clock3 size={20} /><b>Cooked for your order</b><span>Pickup around {en.contact.pickupMinutes} min after confirmation</span></div><div><Bike size={20} /><b>Casa, delivered</b><span>{en.contact.deliveryMinutes} min estimate · kitchen confirms timing</span></div></div></div>
       <div className="product-detail-copy"><p className="section-label">{product.category.toUpperCase()} / MADE TO ORDER</p><div className="dish-flags">{product.vegetarian && <span>Vegetarian recipe</span>}{product.spicy && <span><Flame size={13} />A little heat</span>}<span>{portion}</span></div><h1>{product.name}<span>.</span></h1><p className="detail-description">{product.description}</p><div className="dish-base-price"><b>{product.price} <small>DH</small></b><span>Item price before optional extras</span></div>
       {configurable && <div className="meal-configurator"><div className="meal-config-heading"><h2>Make it yours.</h2><span>Optional choices · price updates below</span></div>{en.mealOptions.map((group, index) => <fieldset className="meal-option-group" key={group.key}><legend><span>0{index + 1}</span>{group.title}</legend><div>{group.choices.map((option) => { const selected = (choices[group.key] || group.choices[0]?.name) === option.name; return <label className={selected ? 'meal-option selected' : 'meal-option'} key={option.name}><input type="radio" name={group.key} value={option.name} checked={selected} onChange={() => { setChoices((current) => ({ ...current, [group.key]: option.name })); setAdded(false); }} /><span>{option.name}</span><b>{option.price ? `+${option.price} DH` : 'Included'}</b></label>; })}</div>{['drink', 'side'].includes(group.key) && group.choices.some((option) => option.name === choices[group.key] && option.price > 0) && <div className="addon-quantity"><span>{group.key === 'drink' ? 'Drinks per meal' : 'Sides per meal'}</span><button type="button" disabled={(optionQuantities[group.key] || 1) <= 1} aria-label={`Fewer ${group.key} portions`} onClick={() => { setOptionQuantities((current) => ({ ...current, [group.key]: Math.max(1, (current[group.key] || 1) - 1) })); setAdded(false); }}><Minus size={14} /></button><b>{optionQuantities[group.key] || 1}</b><button type="button" disabled={(optionQuantities[group.key] || 1) >= 6} aria-label={`More ${group.key} portions`} onClick={() => { setOptionQuantities((current) => ({ ...current, [group.key]: Math.min(6, (current[group.key] || 1) + 1) })); setAdded(false); }}><Plus size={14} /></button></div>}</fieldset>)}</div>}
+      <button className="editorial-link" onClick={() => openDish(product)}>{t.customize} · {t.spice} / {t.notes}<ArrowRight size={16} /></button>
       <div className="dish-order-summary" aria-live="polite"><div><span>{product.name}</span><b>{product.price} DH</b></div>{extras > 0 && <div><span>Selected extras, side & drink</span><b>+{extras} DH</b></div>}<div className="dish-total"><span>{quantity} × your selection</span><b>{unitPrice * quantity} DH</b></div><small>Delivery calculated at checkout. Pickup is free.</small></div>
       <div className="detail-purchase"><div className="quantity-control detail-quantity"><button disabled={quantity <= 1} onClick={() => { setQuantity((current) => Math.max(1, current - 1)); setAdded(false); }} aria-label="Decrease quantity"><Minus size={16} /></button><span>{quantity}</span><button disabled={quantity >= 10} onClick={() => { setQuantity((current) => Math.min(10, current + 1)); setAdded(false); }} aria-label="Increase quantity"><Plus size={16} /></button></div><button className="button button-red" disabled={!configured} onClick={addToCart}><ShoppingBag size={17} />{added ? 'Add another' : 'Add to order'}<span>{unitPrice * quantity} DH</span></button></div>{added && <div className="dish-added" role="status"><Check size={17} /><span>Your selection is in the bag.</span><a href="/menu#cart">View order<ArrowRight size={15} /></a></div>}<p className="dish-payment"><ShieldCheck size={15} />Pay cash on delivery or collection · no account needed</p>
       </div>

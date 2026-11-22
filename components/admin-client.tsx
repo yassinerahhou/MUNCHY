@@ -23,6 +23,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useSiteContent } from '@/components/content-provider';
 import ContentManager from '@/components/content-manager';
 import CateringInbox from '@/components/catering-inbox';
+import HospitalityInbox from '@/components/hospitality-inbox';
 
 type Status = 'received' | 'accepted' | 'preparing' | 'ready' | 'out_for_delivery' | 'completed' | 'cancelled';
 type AdminOrder = {
@@ -78,7 +79,7 @@ function playOrderChime() {
 
 export default function AdminClient() {
   const en = useSiteContent();
-  const [tab, setTab] = useState<'orders' | 'storefront' | 'catering'>('orders');
+  const [tab, setTab] = useState<'orders' | 'storefront' | 'catering' | 'hospitality'>('orders');
   const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [password, setPassword] = useState('');
@@ -256,9 +257,11 @@ export default function AdminClient() {
         <button className={tab === "orders" ? "active" : ""} onClick={() => setTab("orders")}>Orders & service</button>
         <button className={tab === "storefront" ? "active" : ""} onClick={() => setTab("storefront")}>Products, pages & settings</button>
         <button className={tab === "catering" ? "active" : ""} onClick={() => setTab("catering")}>Catering inbox</button>
+        <button className={tab === 'hospitality' ? 'active' : ''} onClick={() => setTab('hospitality')}>Tables, gifts & feedback</button>
       </div>
 
       <div hidden={tab !== "catering"}><CateringInbox /></div>
+      {tab === 'hospitality' && <HospitalityInbox />}
       <div hidden={tab !== "storefront"}><ContentManager /></div>
 
       <div hidden={tab !== "orders"}>
@@ -295,6 +298,7 @@ export default function AdminClient() {
                     </div>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                       <time>{new Date(order.createdAt).toLocaleString('fr-MA', { dateStyle: 'medium', timeStyle: 'short' })}</time>
+                      <button type="button" className="ticket-print-btn" disabled={busyCode === order.code} onClick={async () => { setBusyCode(order.code); setError(''); try { const response = await fetch('/api/admin/webhook', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: order.code }) }); const result = await response.json(); if (!response.ok) throw new Error(result.error); } catch (cause) { setError(cause instanceof Error ? cause.message : 'Webhook failed'); } finally { setBusyCode(''); } }} title="Send or retry configured POS webhook">POS ↗</button>
                       <button className="ticket-print-btn" type="button" onClick={() => triggerPrint(order)} title="Print Thermal KOT Ticket">
                         <Printer size={14} /> Print
                       </button>

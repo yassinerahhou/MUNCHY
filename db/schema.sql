@@ -43,3 +43,20 @@ CREATE TABLE IF NOT EXISTS munchy_media (
   payload MEDIUMBLOB NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS munchy_hospitality (
+  request_id VARCHAR(32) PRIMARY KEY,
+  kind VARCHAR(20) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'new',
+  payload LONGTEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_hospitality_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS munchy_group_carts (
+  token CHAR(32) PRIMARY KEY,
+  payload LONGTEXT NOT NULL,
+  revision INT UNSIGNED NOT NULL DEFAULT 1,
+  expires_at TIMESTAMP NOT NULL,
+  INDEX idx_group_expiry (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

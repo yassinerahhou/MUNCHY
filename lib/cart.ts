@@ -6,7 +6,9 @@ import { persist } from 'zustand/middleware';
 export type CartItem = {
   id: string;
   productId?: string;
-  selections?: Array<{ key: string; option: string }>;
+  selections?: Array<{ key: string; option: string; quantity?: number }>;
+  kitchenNotes?: string;
+  spice?: 'mild' | 'house' | 'hot';
   name: string;
   price: number;
   quantity: number;
@@ -23,11 +25,21 @@ type CartState = {
   earnPoints: (amount: number) => void;
   redeemPoints: (amount: number) => void;
   clear: () => void;
+  lastOrder: CartItem[];
+  remember: () => void;
+  replace: (items: CartItem[]) => void;
+  groupToken: string | null;
+  groupSync: string;
 };
 
 export const useCart = create<CartState>()(persist((set) => ({
   items: [],
   points: 0,
+  lastOrder: [],
+  groupToken: null,
+  groupSync: '',
+  remember: () => set(state => ({ lastOrder: state.items.map(item => ({ ...item })) })),
+  replace: (items) => set({ items }),
   addItem: (item) => set((state) => ({
     items: state.items.some((entry) => entry.id === item.id && !item.id.startsWith('custom-box-'))
       ? state.items.map((entry) => entry.id === item.id ? { ...entry, quantity: Math.min(10, entry.quantity + 1) } : entry)

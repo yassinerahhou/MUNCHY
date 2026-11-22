@@ -1,7 +1,9 @@
 import { resolveSelections } from '@/lib/product-options';
+import { deliveryQuote, isPeak } from '@/lib/hospitality';
 import { sameOrigin } from '@/lib/request-origin';
 import { randomBytes } from 'node:crypto';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
+import { deliverOrderWebhook, webhookConfigured } from '@/lib/order-webhook';
 import { initialContent as en, type SiteContent } from '@/lib/content-types';
 import { readSiteContent } from '@/lib/site-content';
 import { createOrder, findOrder, type OrderLine, type OrderRecord } from '@/lib/order-store';
@@ -35,7 +37,10 @@ function normalizedLines(input: unknown, en: SiteContent): OrderLine[] | null {
   const lines: OrderLine[] = [];
   for (const raw of input) {
     if (!raw || typeof raw !== 'object') return null;
-    const entry = raw as { id?: unknown; quantity?: unknown; productId?: unknown; selections?: unknown; customization?: unknown };
+    const entry = raw as { id?: unknown; quantity?: unknown; productId?: unknown; selections?: unknown; customization?: unknown; kitchenNotes?: unknown; spice?: unknown };
+    const kitchenNotes = String(entry.kitchenNotes || '').trim();
+    const spice = entry.spice === undefined ? 'house' : entry.spice;
+    if (kitchenNotes.length > 240 || !['mild', 'house', 'hot'].includes(String(spice))) return null;
     const id = String(entry.id ?? '');
     const quantity = Number(entry.quantity);
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) return null;
@@ -65,7 +70,7 @@ function normalizedLines(input: unknown, en: SiteContent): OrderLine[] | null {
     if (!product) return null;
     const options = resolveSelections(product, entry.selections, en.mealOptions);
     if (!options) return null;
-    lines.push({ id, name: product.name + (options.summary ? ` · ${options.summary}` : ''), quantity, unitPrice: product.price + options.extra, customization: options.selections });
+    lines.push({ id, name: product.name + (options.summary ? ` · ${options.summary}` : '') + (spice !== 'house' ? ` · ${spice}` : '') + (kitchenNotes ? ` · Kitchen note: ${kitchenNotes}` : ''), quantity, unitPrice: product.price + options.extra, customization: options.selections, kitchenNotes, spice: spice as 'mild' | 'house' | 'hot' });
   }
   return lines;
 }
@@ -98,7 +103,16 @@ export async function POST(request: NextRequest) {
   const items = normalizedLines(data.items, en);
   if (!items) return fail('One or more menu items could not be verified. Refresh the menu and try again.');
   const subtotal = items.reduce((total, line) => total + line.unitPrice * line.quantity, 0);
-  const deliveryFee = fulfillment === 'pickup' || subtotal >= en.contact.freeDeliveryFrom ? 0 : en.contact.deliveryFee;
+  let pin: { lat: number; lng: number } | null = null;
+  if (locationUrl) {
+    const coordinates = new URL(locationUrl).searchParams.get('q')?.split(',').map(Number);
+    if (!coordinates || coordinates.length !== 2 || coordinates.some(n => !Number.isFinite(n)) || Math.abs(coordinates[0]) > 90 || Math.abs(coordinates[1]) > 180) return fail('The location coordinates are invalid.');
+    pin = { lat: coordinates[0], lng: coordinates[1] };
+  }
+  const quote = deliveryQuote(pin, subtotal, en.contact);
+  if (fulfillment === 'delivery' && quote.configured && !pin) return fail('Share a location pin to check delivery, or choose pickup.');
+  if (fulfillment === 'delivery' && quote.outside) return fail('This address is outside our delivery area. Choose pickup or contact the kitchen.');
+  const deliveryFee = fulfillment === 'pickup' ? 0 : quote.fee;
   const discount = 0;
   const total = Math.max(0, subtotal + deliveryFee - discount);
   let code = '';
@@ -116,9 +130,13 @@ export async function POST(request: NextRequest) {
     return fail('Ordering is temporarily unavailable. Please call the kitchen and try again shortly.', 503);
   }
   const details = items.map((item) => `• ${item.quantity} × ${item.name} — ${item.unitPrice * item.quantity} DH`).join('\n');
+  if (webhookConfigured()) after(async () => {
+    try { await deliverOrderWebhook(order); }
+    catch { console.error(`Order webhook failed for ${order.code}; retry from the admin desk.`); }
+  });
   const discountLine = discount > 0 ? `\nClub Munchy Reward: -${discount} DH` : '';
   const message = `Hi Munchy! Please confirm order ${code}.\n\n${details}\n\n${en.cart.subtotal}: ${subtotal} DH\n${en.cart.delivery}: ${deliveryFee ? `${deliveryFee} DH` : 'FREE'}${discountLine}\n${en.cart.total}: ${order.total} DH\n\nName: ${name}\nPhone: ${phone}\n${fulfillment === 'delivery' ? `Address: ${order.address}${locationUrl ? `\nMap: ${locationUrl}` : ''}` : 'Pickup from the Munchy kitchen'}\nCash on delivery${changeFor === 'exact' ? '' : `, change from ${changeFor} DH`}.`;
   const whatsappNumber = (process.env.MUNCHY_WHATSAPP_NUMBER || en.contact.phone).replace(/\D/g, '');
   const waBase = whatsappNumber ? `https://wa.me/${whatsappNumber}` : 'https://wa.me/';
-  return NextResponse.json({ orderCode: code, status: order.status, subtotal, deliveryFee, total: order.total, pointsEarned: Math.floor(subtotal / 10) * 10, whatsappUrl: `${waBase}?text=${encodeURIComponent(message)}` }, { status: 201 });
+  return NextResponse.json({ orderCode: code, status: order.status, subtotal, deliveryFee, total: order.total, extraPrepMinutes: isPeak() ? 15 : 0, pointsEarned: Math.floor(subtotal / 10) * 10, whatsappUrl: `${waBase}?text=${encodeURIComponent(message)}` }, { status: 201 });
 }

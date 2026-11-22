@@ -18,8 +18,8 @@ if (!failed) {
   let connection;
   try {
     connection = await mysql.createConnection({ host: process.env.DB_HOST, port: Number(process.env.DB_PORT || 3306), database: process.env.DB_NAME, user: process.env.DB_USER, password: process.env.DB_PASSWORD, connectTimeout: 8000, timezone: 'Z' });
-    for (const table of ['munchy_orders', 'munchy_catering_leads', 'munchy_content', 'munchy_media']) await connection.query(`SELECT 1 FROM ${table} LIMIT 1`);
-    console.log('PASS production configuration and four database tables');
+    for (const table of ['munchy_orders', 'munchy_catering_leads', 'munchy_content', 'munchy_media', 'munchy_hospitality', 'munchy_group_carts']) await connection.query(`SELECT 1 FROM ${table} LIMIT 1`);
+    console.log('PASS production configuration and six database tables');
   } catch { fail('Database unavailable or schema incomplete. Check hPanel credentials and import db/schema.sql.'); }
   finally { await connection?.end(); }
 }

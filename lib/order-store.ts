@@ -1,9 +1,10 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import mysql, { type Pool } from 'mysql2/promise';
+import mysql from 'mysql2';
+import type { Pool } from 'mysql2/promise';
 
 export type OrderStatus = 'received' | 'accepted' | 'preparing' | 'ready' | 'out_for_delivery' | 'completed' | 'cancelled';
-export type OrderLine = { id: string; name: string; quantity: number; unitPrice: number; customization?: Array<{ key: string; option: string }> };
+export type OrderLine = { id: string; name: string; quantity: number; unitPrice: number; kitchenNotes?: string; spice?: 'mild' | 'house' | 'hot'; customization?: Array<{ key: string; option: string; quantity?: number }> };
 export type OrderRecord = {
   code: string;
   name: string;
@@ -35,7 +36,8 @@ export function hasDatabaseConfig() {
 }
 
 export function getPool() {
-  if (!pool) pool = mysql.createPool({
+  if (!pool) {
+    const corePool = mysql.createPool({
     host: process.env.DB_HOST,
     port: Number(process.env.DB_PORT || 3306),
     database: process.env.DB_NAME,
@@ -46,7 +48,12 @@ export function getPool() {
     queueLimit: 20,
     charset: 'utf8mb4',
     timezone: 'Z',
-  });
+    });
+    corePool.on('connection', connection => {
+      connection.query("SET time_zone = '+00:00'", error => { if (error) connection.destroy(); });
+    });
+    pool = corePool.promise();
+  }
   return pool;
 }
 

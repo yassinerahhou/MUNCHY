@@ -8,3 +8,5 @@ out/
 .test-data/
 .next-test/
 releases/
+output/
+.playwright-cli/

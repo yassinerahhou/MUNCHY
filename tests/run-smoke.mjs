@@ -4,6 +4,8 @@ import { readFile, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
+import { createServer } from 'node:http';
+import { createHmac, randomUUID } from 'node:crypto';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const distName = '.next-test';
@@ -12,9 +14,17 @@ const base = process.env.MUNCHY_TEST_URL || 'http://localhost:3001';
 const port = new URL(base).port || '80';
 const tests = [];
 const check = (name, fn) => tests.push({ name, fn });
+const deliveries = [];
+const webhook = createServer(async (request, response) => {
+  let body = ''; for await (const chunk of request) body += chunk;
+  deliveries.push({ body, headers: request.headers });
+  response.writeHead(200, { 'content-type': 'application/json' }); response.end('{"ok":true}');
+});
+await new Promise(resolve => webhook.listen(0, '127.0.0.1', resolve));
+const webhookUrl = `http://127.0.0.1:${webhook.address().port}`;
 const app = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'dev', '--turbopack', '--hostname', 'localhost', '--port', port], {
   cwd: root,
-  env: { ...process.env, MUNCHY_TEST_BUILD_DIR: distName, MUNCHY_LOCAL_DATA_DIR: dataDirectory, MUNCHY_FORCE_LOCAL_DATA: '1', DB_HOST: '', DB_NAME: '', DB_USER: '', DB_PASSWORD: '' },
+  env: { ...process.env, MUNCHY_TEST_BUILD_DIR: distName, MUNCHY_LOCAL_DATA_DIR: dataDirectory, MUNCHY_FORCE_LOCAL_DATA: '1', DB_HOST: '', DB_NAME: '', DB_USER: '', DB_PASSWORD: '', ORDER_WEBHOOK_URL: webhookUrl, ORDER_WEBHOOK_SECRET: 'smoke-test-webhook-secret', NEXT_PUBLIC_KITCHEN_LAT: '', NEXT_PUBLIC_KITCHEN_LNG: '' },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
 let serverOutput = '';
@@ -24,7 +34,7 @@ const origin = new URL(base).origin;
 const json = (value) => ({ method: 'POST', headers: { 'content-type': 'application/json', origin }, body: JSON.stringify(value) });
 
 check('all customer and operator pages render', async () => {
-  for (const route of ['/', '/menu', '/story', '/catering', '/checkout', '/track', '/admin', '/help', '/menu/panini-poulet', '/menu/zaalouk-wrap']) {
+  for (const route of ['/', '/menu', '/story', '/catering', '/checkout', '/track', '/admin', '/help', '/reserve', '/gift', '/review', '/agency', '/build', '/menu/panini-poulet', '/menu/zaalouk-wrap']) {
     const response = await fetch(`${base}${route}`);
     assert.equal(response.status, 200, `${route} should return 200`);
     const html = await response.text();
@@ -159,7 +169,7 @@ check('product meal options are priced by the server and preserved in kitchen ti
   const html = await detail.text();
   assert.match(html, /Make it yours/); assert.match(html, /Cola/); assert.match(html, /What’s inside/);
   const selections = [{ key: 'sauce', option: 'Garlic sauce' }, { key: 'extra', option: 'Extra cheddar' }, { key: 'side', option: 'Seasoned fries' }, { key: 'drink', option: 'Cola · 33cl' }];
-  const payload = { name: 'Meal Test', phone: '+212600000000', address: '12 Rue Test, Casablanca', fulfillment: 'pickup', items: [{ id: 'double-smash--1-1-1-1', productId: 'double-smash', selections, quantity: 2, unitPrice: 0.01 }] };
+  const payload = { name: 'Meal Test', phone: '+212600000000', address: '12 Rue Test, Casablanca', fulfillment: 'pickup', items: [{ id: 'double-smash--1-1-1-1', productId: 'double-smash', selections, quantity: 2, unitPrice: 0.01, kitchenNotes: 'No raw onion please', spice: 'mild' }] };
   const response = await fetch(`${base}/api/orders`, json(payload));
   const receipt = await response.json(); assert.equal(response.status, 201, receipt.error);
   assert.equal(receipt.subtotal, (55 + 7 + 12 + 12) * 2); assert.equal(receipt.total, 172);
@@ -170,6 +180,9 @@ check('product meal options are priced by the server and preserved in kitchen ti
   const order = orders.orders.find((item) => item.code === receipt.orderCode);
   assert.equal(order.items[0].unitPrice, 86); assert.equal(order.items[0].quantity, 2);
   assert.equal(order.items[0].customization.length, 4);
+  assert.equal(order.items[0].kitchenNotes, 'No raw onion please');
+  assert.equal(order.items[0].spice, 'mild');
+  assert.match(decodeURIComponent(receipt.whatsappUrl), /No raw onion please/);
   payload.items[0].selections = selections.map((selection) => selection.key === 'drink' ? { ...selection, quantity: 2 } : selection);
   const twoDrinks = await fetch(`${base}/api/orders`, json(payload));
   assert.equal(twoDrinks.status, 201); assert.equal((await twoDrinks.json()).total, 196);
@@ -177,6 +190,67 @@ check('product meal options are priced by the server and preserved in kitchen ti
   assert.equal((await fetch(`${base}/api/orders`, json(payload))).status, 400);
   payload.items[0].selections = [{ key: 'drink', option: 'No drink' }, { key: 'drink', option: 'Cola · 33cl' }];
   assert.equal((await fetch(`${base}/api/orders`, json(payload))).status, 400);
+});
+
+check('hospitality requests persist privately, validate data, and support admin follow-up', async () => {
+  assert.equal((await fetch(`${base}/api/admin/hospitality`)).status, 401);
+  const date = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+  const common = { name: 'Hospitality Test', phone: '0600000001', email: 'test@example.ma' };
+  const reservation = { ...common, kind: 'reservation', date, time: '12:00', guests: 4, zone: 'Terrace', occasion: 'Birthday' };
+  const saved = await fetch(`${base}/api/hospitality`, json(reservation));
+  const ticket = await saved.json(); assert.equal(saved.status, 201, ticket.error);
+  assert.equal(ticket.status, 'request_received'); assert.match(ticket.reference, /^MH-[A-F0-9]{16}$/);
+  assert.equal((await fetch(`${base}/api/hospitality`, json({ ...reservation, time: '05:00' }))).status, 400);
+  assert.equal((await fetch(`${base}/api/hospitality`, json({ ...common, kind: 'club', consent: false }))).status, 400);
+  assert.equal((await fetch(`${base}/api/hospitality`, json({ ...common, kind: 'club', consent: true }))).status, 201);
+  assert.equal((await fetch(`${base}/api/hospitality`, json({ ...common, kind: 'gift', amount: 200, recipient: 'My friend', message: 'Besseha!' }))).status, 201);
+  for (const rating of [1, 5]) {
+    const response = await fetch(`${base}/api/hospitality`, json({ ...common, kind: 'feedback', rating, message: 'An honest test of the feedback flow.' }));
+    assert.equal(response.status, 201, 'All ratings receive the same feedback flow');
+  }
+  const login = await fetch(`${base}/api/admin/session`, json({ password: 'munchy-demo-2026' }));
+  const cookie = (login.headers.get('set-cookie') || '').split(';')[0];
+  const inbox = await (await fetch(`${base}/api/admin/hospitality`, { headers: { cookie } })).json();
+  assert.equal(inbox.requests.length, 5);
+  assert.equal(inbox.requests.find(row => row.kind === 'gift').details.redeemable, false);
+  const update = await fetch(`${base}/api/admin/hospitality`, { method: 'PATCH', headers: { cookie, origin, 'content-type': 'application/json' }, body: JSON.stringify({ id: ticket.reference, status: 'contacted' }) });
+  assert.equal(update.status, 200);
+  const disk = JSON.parse(await readFile(path.join(dataDirectory, 'hospitality.json'), 'utf8'));
+  assert.equal(disk.find(row => row.id === ticket.reference).status, 'contacted');
+  assert.equal((await fetch(`${base}/api/admin/webhook`, json({ code: 'MC-000000' }))).status, 403);
+});
+
+check('live group carts reprice items, merge concurrent adds and deduplicate retries', async () => {
+  const create = await fetch(`${base}/api/group-cart`, json({ items: [{ id: 'double-smash', quantity: 1, price: 0.01, name: 'Forged price' }] }));
+  const group = await create.json(); assert.equal(create.status, 201, group.error);
+  assert.match(group.token, /^[a-f0-9]{32}$/); assert.equal(group.items[0].price, 55);
+  const operationId = randomUUID();
+  const update = (id) => fetch(`${base}/api/group-cart`, { ...json({ token: group.token, operationId: id, operations: [{ id: 'double-smash', delta: 1 }] }), method: 'PATCH' });
+  const results = await Promise.all([update(operationId), update(randomUUID())]);
+  for (const response of results) assert.equal(response.status, 200);
+  const duplicate = await update(operationId); assert.equal((await duplicate.json()).items[0].quantity, 3);
+  const read = await fetch(`${base}/api/group-cart?token=${group.token}`);
+  assert.match(read.headers.get('cache-control'), /no-store/); assert.equal((await read.json()).items[0].quantity, 3);
+  const unsafe = await fetch(`${base}/api/group-cart`, { ...json({ token: group.token, operationId: randomUUID(), operations: [{ id: 'made-up', delta: 1, item: { id: 'made-up', quantity: 1, price: 0 } }] }), method: 'PATCH' });
+  assert.equal(unsafe.status, 400);
+  assert.equal((await fetch(`${base}/api/group-cart?token=${'f'.repeat(32)}`)).status, 404);
+  const crossOrigin = await fetch(`${base}/api/group-cart`, { method: 'POST', headers: { 'content-type': 'application/json', origin: 'https://not-munchy.example' }, body: JSON.stringify({ items: [] }) });
+  assert.equal(crossOrigin.status, 403);
+});
+
+check('POS routing sends a signed structured order and supports authenticated retry', async () => {
+  for (let attempt = 0; deliveries.length === 0 && attempt < 30; attempt++) await delay(100);
+  assert.ok(deliveries.length > 0, 'Expected an order webhook');
+  const delivery = deliveries[0];
+  const payload = JSON.parse(delivery.body);
+  assert.equal(payload.currency, 'MAD'); assert.equal(payload.event, 'order.received');
+  assert.equal(delivery.headers['idempotency-key'], payload.order.code);
+  const expected = createHmac('sha256', 'smoke-test-webhook-secret').update(`${delivery.headers['x-munchy-timestamp']}.${delivery.body}`).digest('hex');
+  assert.equal(delivery.headers['x-munchy-signature'], `sha256=${expected}`);
+  const login = await fetch(`${base}/api/admin/session`, json({ password: 'munchy-demo-2026' }));
+  const cookie = (login.headers.get('set-cookie') || '').split(';')[0];
+  const response = await fetch(`${base}/api/admin/webhook`, { ...json({ code: payload.order.code }), headers: { ...json({}).headers, cookie } });
+  assert.equal(response.status, 200); assert.equal((await response.json()).delivered, true);
 });
 
 async function waitForServer() {
@@ -199,6 +273,7 @@ try {
   failed += 1;
   console.error(error instanceof Error ? error.message : error);
 } finally {
+  webhook.close();
   app.kill('SIGTERM');
   await Promise.race([new Promise((resolve) => app.once('exit', resolve)), delay(5000)]);
   const resolvedData = path.resolve(dataDirectory);

@@ -48,6 +48,18 @@ export async function saveSiteContent(content: SiteContent, expectedRevision: nu
 export function validateSiteContent(value: unknown): asserts value is SiteContent {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid site content.');
   const content = value as SiteContent;
+  if (content.menuCopy) for (const locale of ['fr', 'ar'] as const) {
+    const dictionary = content.menuCopy[locale];
+    if (!dictionary || typeof dictionary !== 'object' || Object.keys(dictionary).length > 250 || Object.entries(dictionary).some(([key, text]) => !/^[a-z0-9-]{1,80}$/.test(key) || typeof text !== 'string' || text.length > 1000)) throw new Error(`Check menu copy for ${locale}.`);
+  }
+  if (content.editorial) {
+    for (const locale of ['en', 'fr', 'ar'] as const) {
+      for (const [key, defaultValue] of Object.entries(initialContent.editorial[locale])) {
+        const value = content.editorial[locale]?.[key as keyof typeof content.editorial.en];
+        if (Array.isArray(defaultValue) ? !Array.isArray(value) || value.length !== 3 || value.some(line => typeof line !== 'string' || line.length > 200) : typeof value !== 'string' || value.length > 3000) throw new Error(`Check editorial ${locale}: ${key}.`);
+      }
+    }
+  }
   if (!Array.isArray(content.products) || content.products.length < 1 || content.products.length > 250) throw new Error('Keep between 1 and 250 products.');
   if (!content.products.some((product) => product.available !== false)) throw new Error('Keep at least one available product.');
   for (const image of [content.experience?.image, content.experience?.teamImage]) { if (typeof image !== 'string' || !/^\/(?:images\/|api\/media\/)[a-zA-Z0-9._/-]+$/.test(image) || image.includes('..')) throw new Error('Use a local library or uploaded image for the space and team.'); }

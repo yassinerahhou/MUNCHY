@@ -1,6 +1,6 @@
 # Deploy Munchy on Hostinger Business
 
-Prepared 2026-11-17. No remote account was modified or live database tested during packaging.
+Updated 2026-11-22. No remote account was modified or live database tested during packaging.
 
 ## 1. The correct deployment
 
@@ -14,7 +14,7 @@ Use **Web App → Upload your files**. Ordinary File Manager extraction into `pu
 
 1. In hPanel database management, create a MySQL database, user and strong password. Record full database/user names including Hostinger prefixes.
 2. Open phpMyAdmin for that database. Import `db/schema.sql` from the ZIP.
-3. Confirm four tables: `munchy_orders`, `munchy_catering_leads`, `munchy_content`, `munchy_media`.
+3. Confirm six tables: `munchy_orders`, `munchy_catering_leads`, `munchy_content`, `munchy_media`, `munchy_hospitality`, `munchy_group_carts`. Re-import the schema when updating an older installation; CREATE TABLE IF NOT EXISTS preserves existing data.
 4. Use the exact MySQL hostname shown by hPanel. Use localhost only if specified by your connection details. If database access permissions are required for your managed Node app, follow Hostinger's configuration instructions rather than opening unrestricted database access.
 
 Use a new database for first launch. The schema creates tables without dropping data. Back up existing databases before migrations. A new database initially uses the catalog included in source; publishing through admin stores edits in MySQL.
@@ -82,16 +82,36 @@ This release intentionally excludes local `.data` customer records and uploads. 
 ## 7. Troubleshooting
 
 - Build fails: verify Node 22, dev dependencies during build, and build logs. Next's Google font build step requires network access. Do not upload Windows `node_modules` or `.next`.
-- Health 503: check DB/admin settings, database access and all four schema tables; inspect runtime logs privately.
+- Health 503: check DB/admin settings, database access and all six schema tables; inspect runtime logs privately.
 - Admin login fails: check HTTPS and production credentials. Clear stale cookies after session-secret rotation.
 - Wrong WhatsApp destination: configure MUNCHY_WHATSAPP_NUMBER and update published contact details.
 - Orders appear missing: verify DB_NAME still points to the original database. Local JSON storage is development-only.
 - Only PHP files are shown: create a Web App under Business; a PHP directory is not a Node runtime.
 
-## 8. Scope
+## 8. Hospitality upgrade configuration
 
-COD ordering, admin editing, catering, tracking polling and WhatsApp handoff are implemented. Customer accounts, verified redeemable rewards, card payments, live driver GPS, delivery dispatch, automatic WhatsApp Business notifications and offline checkout are not implemented.
+Reservations, gift requests, feedback and explicit club opt-ins are stored in munchy_hospitality and managed under Tables, gifts & feedback in admin. These are requests with follow-up statuses, not an inventory-backed table guarantee or a paid gift balance. Gift request QR codes carry a reference without exposing recipient data.
 
-French/Arabic translate many UI strings; some copy remains English and custom CMS text needs editorial translation. The manifest supplies app metadata, not an offline service worker. Tickets use the browser/OS print dialog, not native ESC/POS.
+Live group bags use munchy_group_carts. Invite links grant editing access for 24 hours; share only with the intended group. Clients poll every four seconds, with queued retries and request IDs that deduplicate recent operations. MySQL updates use a transaction and row lock; local development uses serialized JSON writes. Groups contain cart items, not customer contact/address details. One person places the final order; group membership does not reserve restaurant stock. Expired groups can be purged from the database as part of routine maintenance.
 
-See [release audit](RELEASE-AUDIT.md) for the requirement matrix and validation results.
+Optional configuration:
+
+| Variable | Purpose |
+| --- | --- |
+| NEXT_PUBLIC_KITCHEN_LAT / NEXT_PUBLIC_KITCHEN_LNG | Verified kitchen coordinates; leave blank for manual delivery confirmation |
+| NEXT_PUBLIC_DELIVERY_RADIUS_KM | Geofence radius, default template 5 km |
+| NEXT_PUBLIC_DELIVERY_PER_KM | Optional price per rounded-up straight-line km, added to the base delivery fee below the free threshold |
+| GOOGLE_PLACES_API_KEY / GOOGLE_PLACE_ID | Server-side Places API credentials for genuine Google reviews; API billing may apply |
+| NEXT_PUBLIC_GOOGLE_REVIEW_URL | Real Google review URL, offered equally at every rating |
+| NEXT_PUBLIC_AGENCY_URL | Actual agency portfolio; blank uses the local case-study route |
+| ORDER_WEBHOOK_URL / ORDER_WEBHOOK_SECRET | HTTPS POS receiver and private HMAC secret |
+
+Rebuild after changing NEXT_PUBLIC values because Next.js embeds them in client bundles. The delivery radius is straight-line distance, not driving distance. A pin is required for delivery when a geofence is enabled; pickup remains available. Peak estimates add 15 minutes on Friday/Saturday 20:00–22:30 Casablanca time. Estimates still require kitchen confirmation.
+
+POS payload: event order.received, version 1, currency MAD, id/order.code and full server-priced order. Verify X-Munchy-Signature = sha256=HMAC_SHA256(secret, timestamp + '.' + raw_body), using X-Munchy-Timestamp. Reject stale timestamps and deduplicate Idempotency-Key (order code) at the receiver. Initial delivery runs after the saved order response with a five-second timeout. This is best-effort delivery, not a durable automatic outbox; admin's POS button retries a saved order. Never mark a retry as a second sale. A live POS/WhatsApp Business account is not provisioned automatically.
+
+The Google review section remains absent until real credentials are configured. Feedback never suppresses the public review option based on score. No rating or review count is fabricated. Follow Google's review attribution and API billing requirements when enabling it.
+
+The storefront studio now includes editorial (EN/FR/AR) and menuCopy (French/Arabic seed descriptions). Keep translated copy aligned when editing recipes. Custom product names, kitchen notes, ingredients and operator-authored content retain their entered language. The manifest supplies app metadata; offline checkout and a native app are not included.
+
+Remaining integrations requiring real operator setup include card payment/activation, verified customer loyalty accounts, driver dispatch and automated marketing delivery. Ticket printing uses the browser/OS dialog rather than native ESC/POS. See RELEASE-AUDIT.md for verification evidence and limits.

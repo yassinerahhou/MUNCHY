@@ -2,9 +2,9 @@
 
 import { createContext, useContext, useEffect, useMemo } from 'react';
 import { initialContent, type SiteContent } from '@/lib/content-types';
-import { configuredProduct } from '@/lib/product-options';
+import { refreshCart } from '@/lib/cart-share';
 import { useCart } from '@/lib/cart';
-import { LocaleProvider, useLocale, applyLocaleToContent } from '@/lib/locale';
+import { LocaleProvider, useLocale, applyLocaleToContent, type Locale } from '@/lib/locale';
 
 const ContentContext = createContext<SiteContent>(initialContent);
 
@@ -14,22 +14,16 @@ function InnerContentProvider({ content, children }: { content: SiteContent; chi
 
   useEffect(() => {
     const current = useCart.getState().items;
-    const items = current.flatMap((item) => {
-      if (item.id.startsWith('custom-box-')) return [item];
-      const product = content.products.find((entry) => entry.id === (item.productId || item.id) && entry.available !== false);
-      if (!product) return [];
-      const configured = configuredProduct(product, item.selections || [], content);
-      return configured ? [{ ...item, ...configured }] : [];
-    });
+    const items = refreshCart(current, content);
     if (JSON.stringify(items) !== JSON.stringify(current)) useCart.setState({ items });
-  }, [content.products, content.mealOptions]);
+  }, [content.products, content.mealOptions, content.builderOptions]);
 
   return <ContentContext.Provider value={localizedContent}>{children}</ContentContext.Provider>;
 }
 
-export function ContentProvider({ content, children }: { content: SiteContent; children: React.ReactNode }) {
+export function ContentProvider({ content, children, initialLocale = 'en' }: { content: SiteContent; children: React.ReactNode; initialLocale?: Locale }) {
   return (
-    <LocaleProvider>
+    <LocaleProvider initialLocale={initialLocale}>
       <InnerContentProvider content={content}>{children}</InnerContentProvider>
     </LocaleProvider>
   );

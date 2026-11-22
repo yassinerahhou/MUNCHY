@@ -20,6 +20,8 @@ try {
   assert.ok(ready, output);
   assert.equal((await fetch(base)).status, 200);
   assert.equal((await fetch(`${base}/api/health`)).status, 503);
+  const group = await fetch(`${base}/api/group-cart`, { method: 'POST', headers: { 'content-type': 'application/json', origin: base }, body: JSON.stringify({ items: [] }) });
+  assert.equal(group.status, 503, 'Group ordering must require a production database');
   const order = await fetch(`${base}/api/orders`, {
     method: 'POST', headers: { 'content-type': 'application/json', origin: base },
     body: JSON.stringify({ name: 'Deployment check', phone: '+212600000001', fulfillment: 'pickup', items: [{ id: 'double-smash', quantity: 1 }] }),
