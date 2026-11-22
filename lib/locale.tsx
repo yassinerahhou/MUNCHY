@@ -47,7 +47,7 @@ export function applyLocaleToContent(base: SiteContent, locale: Locale): SiteCon
       delivery: target.hero.delivery,
       stamp: target.hero.stamp,
     },
-    menu: { ...base.menu, label: target.menu.label, title: target.menu.title, body: target.menu.body, categories: [...target.menu.categories] },
+    menu: { ...base.menu, label: target.menu.label, title: target.menu.title, body: target.menu.body },
     catalog: { ...base.catalog, ...target.catalog, title: [...target.catalog.title] },
     matcher: { ...base.matcher, ...target.matcher, budgets: [...target.matcher.budgets], hunger: [...target.matcher.hunger] },
     builder: { ...base.builder, ...target.builder },
@@ -58,7 +58,6 @@ export function applyLocaleToContent(base: SiteContent, locale: Locale): SiteCon
     footer: { ...base.footer, ...target.footer },
     contact: {
       ...base.contact,
-      deliveryZones: [...target.contact.deliveryZones],
     },
     story: {
       ...base.story,
@@ -93,6 +92,12 @@ export function applyLocaleToContent(base: SiteContent, locale: Locale): SiteCon
       receiptTitle: [...target.ui.receiptTitle],
     },
   };
+}
+
+// Canonical names remain stable for filtering and CMS changes; translate labels only.
+export function categoryLabel(category: string, locale: Locale) {
+  const index = (en.menu.categories as readonly string[]).indexOf(category);
+  return index < 0 ? category : locales[locale].menu.categories[index] || category;
 }
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {

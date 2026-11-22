@@ -39,52 +39,22 @@ export const metadata: Metadata = {
   },
 };
 
-const restaurantJsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'FastFoodRestaurant',
-  name: 'Munchy Casablanca',
-  image: 'https://munchy.ma/images/smash-burger.webp',
-  telephone: '+212600000000',
-  url: 'https://munchy.ma',
-  priceRange: '20 DH - 70 DH',
-  servesCuisine: ['Smash Burgers', 'French Tacos', 'Fast Food', 'Moroccan Snacks'],
-  address: {
-    '@type': 'PostalAddress',
-    streetAddress: '12 Rue des Épices, Maârif',
-    addressLocality: 'Casablanca',
-    addressCountry: 'MA',
-  },
-  geo: {
-    '@type': 'GeoCoordinates',
-    latitude: 33.5878,
-    longitude: -7.6358,
-  },
-  openingHoursSpecification: [
-    {
-      '@type': 'OpeningHoursSpecification',
-      dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday'],
-      opens: '12:00',
-      closes: '23:00',
-    },
-    {
-      '@type': 'OpeningHoursSpecification',
-      dayOfWeek: ['Friday', 'Saturday', 'Sunday'],
-      opens: '12:00',
-      closes: '00:00',
-    },
-  ],
-  hasMenu: 'https://munchy.ma/menu',
-};
-
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const { content } = await readSiteContent();
+  const siteUrl = process.env.SITE_URL;
+  const restaurantJsonLd = siteUrl && process.env.BUSINESS_VERIFIED === '1' ? {
+    '@context': 'https://schema.org', '@type': 'FastFoodRestaurant',
+    name: content.branding.name, url: siteUrl, telephone: content.contact.phone,
+    address: content.contact.address, hasMenu: new URL('/menu', siteUrl).href,
+    servesCuisine: ['Burgers', 'French tacos', 'Moroccan snacks'],
+  } : null;
   return (
     <html lang="en">
       <head>
-        <script
+        {restaurantJsonLd && <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(restaurantJsonLd) }}
-        />
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(restaurantJsonLd).replace(/</g, "\\u003c") }}
+        />}
       </head>
       <body
         className={`${display.variable} ${body.className}`}

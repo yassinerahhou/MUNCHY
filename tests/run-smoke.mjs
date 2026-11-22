@@ -46,6 +46,9 @@ check('optimized product images have the correct format and transfer size', asyn
 });
 
 check('order API rejects bad phones and untrusted item prices', async () => {
+  const forgedReward = await fetch(`${base}/api/orders`, json({ name: 'Test Guest', phone: '+212600000001', address: 'Test street Casablanca', redeemPoints: true, items: [{ id: 'double-smash', quantity: 1 }] }));
+  assert.equal(forgedReward.status, 400, 'Unverified reward claims must not discount orders');
+
   const invalidPhone = await fetch(`${base}/api/orders`, json({ name: 'Test Guest', phone: '555123456', address: 'Maârif, Casablanca', items: [{ id: 'double-smash', quantity: 1 }] }));
   assert.equal(invalidPhone.status, 400);
   const fakeProduct = await fetch(`${base}/api/orders`, json({ name: 'Test Guest', phone: '+212600000000', address: 'Maârif, Casablanca', items: [{ id: 'not-a-real-product', quantity: 1, unitPrice: 0.01 }] }));

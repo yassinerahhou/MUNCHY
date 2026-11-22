@@ -1,4 +1,5 @@
 'use client';
+import { csvCell } from '@/lib/csv';
 
 import {
   ArrowDownRight,
@@ -188,10 +189,10 @@ export default function AdminClient() {
     const rows = orders.map((o) => [
       o.code,
       new Date(o.createdAt).toLocaleString('fr-MA'),
-      `"${o.name.replace(/"/g, '""')}"`,
-      `"${o.phone}"`,
+      o.name,
+      o.phone,
       o.fulfillment,
-      `"${(o.address || '').replace(/"/g, '""')}"`,
+      o.address || '',
       o.subtotal,
       o.deliveryFee,
       o.total,
@@ -199,7 +200,7 @@ export default function AdminClient() {
       o.changeFor,
       o.status
     ]);
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const csvContent = '\uFEFF' + [headers, ...rows].map(row => row.map(csvCell).join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -208,6 +209,7 @@ export default function AdminClient() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   return <main className="admin-page">

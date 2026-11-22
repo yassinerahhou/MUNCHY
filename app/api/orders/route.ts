@@ -91,15 +91,20 @@ export async function POST(request: NextRequest) {
     try { if (new URL(locationUrl).hostname !== 'maps.google.com') return fail('The shared map link is not valid.'); }
     catch { return fail('The shared map link is not valid.'); }
   }
-  const { content: en } = await readSiteContent();
+  if (data.redeemPoints) return fail('Online reward redemption is not enabled. Please contact the kitchen.');
+  let en: SiteContent;
+  try { ({ content: en } = await readSiteContent()); }
+  catch { return fail('Ordering is temporarily unavailable. Please try again shortly.', 503); }
   const items = normalizedLines(data.items, en);
   if (!items) return fail('One or more menu items could not be verified. Refresh the menu and try again.');
   const subtotal = items.reduce((total, line) => total + line.unitPrice * line.quantity, 0);
   const deliveryFee = fulfillment === 'pickup' || subtotal >= en.contact.freeDeliveryFrom ? 0 : en.contact.deliveryFee;
-  const discount = Boolean(data.redeemPoints) ? 10 : 0;
+  const discount = 0;
   const total = Math.max(0, subtotal + deliveryFee - discount);
   let code = '';
-  do { code = `MC-${randomBytes(3).toString('hex').toUpperCase()}`; } while (await findOrder(code));
+  try {
+    do { code = `MC-${randomBytes(3).toString('hex').toUpperCase()}`; } while (await findOrder(code));
+  } catch { return fail('Ordering is temporarily unavailable. Please try again shortly.', 503); }
   const order: OrderRecord = {
     code, name, phone, address: address || 'Pickup at Munchy Kitchen', locationUrl: locationUrl || undefined,
     items, fulfillment, payment: 'cash_on_delivery', changeFor, subtotal, deliveryFee, total,

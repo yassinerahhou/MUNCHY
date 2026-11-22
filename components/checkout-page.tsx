@@ -11,7 +11,7 @@ type Confirmation = { code: string; total: number; whatsappUrl: string };
 
 export default function CheckoutPage() {
   const en = useSiteContent();
-  const { items, points, changeQuantity, removeItem, earnPoints, redeemPoints, clear } = useCart();
+  const { items, points, changeQuantity, removeItem, earnPoints, clear } = useCart();
   const [hydrated, setHydrated] = useState(false);
   const [fulfillment, setFulfillment] = useState<'delivery' | 'pickup'>('delivery');
   const [gps, setGps] = useState('');
@@ -25,8 +25,6 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState('');
   const [savedFound, setSavedFound] = useState(false);
 
-  // Points redemption
-  const [redeemClubPoints, setRedeemClubPoints] = useState(false);
 
   useEffect(() => {
     setHydrated(true);
@@ -46,7 +44,7 @@ export default function CheckoutPage() {
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const delivery = fulfillment === 'pickup' || subtotal >= en.contact.freeDeliveryFrom ? 0 : en.contact.deliveryFee;
-  const discount = (redeemClubPoints && points >= 100) ? 10 : 0;
+  const discount = 0;
   const grandTotal = Math.max(0, subtotal + delivery - discount);
 
   const shareLocation = () => {
@@ -85,7 +83,6 @@ export default function CheckoutPage() {
           locationUrl: gps,
           fulfillment,
           changeFor,
-          redeemPoints: redeemClubPoints && points >= 100,
           items: items.map(({ id, productId, selections, quantity, customization }) => ({ id, productId, selections, quantity, customization }))
         })
       });
@@ -97,9 +94,6 @@ export default function CheckoutPage() {
         localStorage.setItem('munchy_customer', JSON.stringify({ name: cleanName, phone: cleanPhone.replace('+212', ''), address: cleanAddress }));
       } catch {}
 
-      if (redeemClubPoints && points >= 100) {
-        redeemPoints(100);
-      }
       earnPoints(result.pointsEarned);
       setConfirmation({ code: result.orderCode, total: result.total, whatsappUrl: result.whatsappUrl });
       clear();
@@ -212,23 +206,6 @@ export default function CheckoutPage() {
                 </button>
               </>}
             </section>
-
-            {points >= 100 && (
-              <section className="checkout-form-section club-redemption-card">
-                <label className="redemption-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={redeemClubPoints}
-                    onChange={(e) => setRedeemClubPoints(e.target.checked)}
-                  />
-                  <div>
-                    <span className="redemption-title"><Sparkles size={14} /> Redeem 100 Club Points</span>
-                    <small>Apply a 10 DH discount on this order (You have {points} pts)</small>
-                  </div>
-                  <b>-10 DH</b>
-                </label>
-              </section>
-            )}
 
             <section className="checkout-form-section">
               <p className="form-step">03 <span>·</span> {en.ui.paymentTitle}</p>

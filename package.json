@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node tests/run-smoke.mjs"
+    "test": "node tests/run-smoke.mjs",
+    "check:deploy": "node scripts/check-deploy.mjs",
+    "package:release": "python scripts/package-release.py",
+    "test:release": "node tests/release-checks.mjs"
+  },
+  "engines": {
+    "node": "22.x"
   },
   "dependencies": {
     "framer-motion": "^11.18.2",

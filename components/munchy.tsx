@@ -7,7 +7,7 @@ import { FormEvent, Fragment, useEffect, useMemo, useState } from 'react';
 import { en } from '@/locales/en';
 import { useSiteContent } from '@/components/content-provider';
 import { useCart } from '@/lib/cart';
-import { useLocale } from '@/lib/locale';
+import { useLocale, categoryLabel } from '@/lib/locale';
 import { getBusinessStatus } from '@/lib/business-hours';
 import RestaurantExperience from '@/components/restaurant-experience';
 import { SiteFooter } from '@/components/site-chrome';
@@ -24,7 +24,6 @@ export default function Munchy() {
   const en = useSiteContent();
   const { locale, setLocale } = useLocale();
   const categories = en.menu.categories;
-  const canonicalCategories = ['Everything', 'Smash burgers', 'French tacos', 'Sandwiches & panini', 'Pizzas', 'Pasticcio & salads', 'Loaded fries', 'Sides & sips', 'Sauces & extras'];
   const featuredProduct = en.products.find((product) => product.available !== false) || en.products[0];
   const { items, points, addItem, changeQuantity, removeItem, earnPoints, clear } = useCart();
   const [selectedCategoryIndex, setSelectedCategoryIndex] = useState(0);
@@ -49,6 +48,13 @@ export default function Munchy() {
   const [receiptPoints, setReceiptPoints] = useState(0);
   const [receipt, setReceipt] = useState(false);
 
+  useEffect(() => {
+    const update = () => setBusinessStatus(getBusinessStatus(en.contact.hours, en.contact.deliveryMinutes));
+    update();
+    const timer = window.setInterval(update, 60_000);
+    return () => window.clearInterval(timer);
+  }, [en.contact.hours, en.contact.deliveryMinutes]);
+
   // Customer details auto-fill
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -57,7 +63,6 @@ export default function Munchy() {
   const [businessStatus, setBusinessStatus] = useState({ isOpen: true, badgeText: 'OPEN NOW', timingText: 'At your door in ~25 min' });
 
   useEffect(() => {
-    setBusinessStatus(getBusinessStatus());
     try {
       const saved = localStorage.getItem('munchy_customer');
       if (saved) {
@@ -73,7 +78,7 @@ export default function Munchy() {
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const delivery = fulfillment === 'pickup' || subtotal === 0 || subtotal >= en.contact.freeDeliveryFrom ? 0 : en.contact.deliveryFee;
   const quantity = items.reduce((sum, item) => sum + item.quantity, 0);
-  const visibleProducts = selectedCategoryIndex === 0 ? en.products.filter((item) => item.available !== false) : en.products.filter((item) => item.available !== false && item.category.toLowerCase() === canonicalCategories[selectedCategoryIndex].toLowerCase());
+  const visibleProducts = selectedCategoryIndex === 0 ? en.products.filter((item) => item.available !== false) : en.products.filter((item) => item.available !== false && item.category.toLowerCase() === (categories[selectedCategoryIndex] || '').toLowerCase());
   const steps = [
     { key: 'base', title: 'Pick your base', note: 'The beginning of a very good idea.' },
     { key: 'protein', title: 'Choose your protein', note: 'Go crispy, beefy, or properly spiced.' },
@@ -181,7 +186,7 @@ export default function Munchy() {
 
     <section className="menu-section section-pad" id="menu">
       <div className="section-top"><Reveal><p className="section-label"><span>01</span> {en.menu.label}</p><h2>{en.menu.title.split('\n').map((line) => <span key={line}>{line}<br /></span>)}</h2></Reveal><Reveal delay={.1}><p className="section-desc">{en.menu.body}</p><button className="text-link" onClick={openMatcher}>{en.ui.menuHelp} <ArrowRight size={16} /></button></Reveal></div>
-      <div className="menu-toolbar"><div className="category-list" role="tablist" aria-label={en.ui.categoryFilter}>{categories.map((item, idx) => <button role="tab" aria-selected={selectedCategoryIndex === idx} key={idx} className={selectedCategoryIndex === idx ? 'category active' : 'category'} onClick={() => { setSelectedCategoryIndex(idx); requestAnimationFrame(() => document.getElementById('home-menu-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}>{item}</button>)}</div><span className="menu-counter">{en.ui.productCount.replace('{count}', String(visibleProducts.length).padStart(2, '0'))}</span></div>
+      <div className="menu-toolbar"><div className="category-list" role="tablist" aria-label={en.ui.categoryFilter}>{categories.map((item, idx) => <button role="tab" aria-selected={selectedCategoryIndex === idx} key={idx} className={selectedCategoryIndex === idx ? 'category active' : 'category'} onClick={() => { setSelectedCategoryIndex(idx); requestAnimationFrame(() => document.getElementById('home-menu-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}>{categoryLabel(item, locale)}</button>)}</div><span className="menu-counter">{en.ui.productCount.replace('{count}', String(visibleProducts.length).padStart(2, '0'))}</span></div>
       <motion.div className="product-grid" id="home-menu-results" layout>{visibleProducts.slice(0, 6).map((product, index) => <motion.article className="product-card" key={product.id} layout initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: .35, delay: index * .04 }}>
         <div className={`product-image ${product.tone}`}><Image src={product.image} alt={product.name} fill sizes="(max-width: 700px) 92vw, 30vw" quality={78} /><span className="product-tag">{product.tag}</span><button aria-label={`Add ${product.name}`} className="quick-add" onClick={() => addProduct(product)}><Plus size={20} /></button></div>
         <div className="product-info"><div><span className="product-category">{product.category}</span><h3><a href={`/menu/${product.id}`}>{product.name}</a></h3></div><b className="product-price">{formatDh(product.price)}</b></div><p className="product-description">{product.description}</p><button className="add-line" onClick={() => addProduct(product)}>{en.ui.addToOrder} <Plus size={15} /></button>

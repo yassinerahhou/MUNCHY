@@ -14,7 +14,7 @@ Open [http://localhost:3000](http://localhost:3000). In development, orders and 
 ## Features
 
 - Responsive home, menu, product detail, story, catering, checkout, tracking, and kitchen desk pages.
-- Persistent cart and loyalty points, item customization, menu search/sort/filter, quick views, and a free-delivery progress indicator.
+- Persistent cart and demo loyalty counter (online redemption disabled), item customization, menu search/sort/filter, quick views, and a free-delivery progress indicator.
 - Server-priced checkout with Moroccan mobile validation, delivery/pickup, GPS link sharing, COD/change preference, order reference, and WhatsApp handoff.
 - Order lookup by reference plus phone suffix; kitchen status updates are reflected in tracking.
 - Catering requests with input validation and a honeypot field.

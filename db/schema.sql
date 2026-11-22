@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS munchy_orders (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_munchy_orders_created (created_at),
   INDEX idx_munchy_orders_phone (customer_phone)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS munchy_catering_leads (
   lead_id VARCHAR(40) PRIMARY KEY,
@@ -29,4 +29,17 @@ CREATE TABLE IF NOT EXISTS munchy_catering_leads (
   note VARCHAR(1000) NOT NULL DEFAULT '',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_catering_created (created_at)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS munchy_content (
+  content_key VARCHAR(50) PRIMARY KEY,
+  payload LONGTEXT NOT NULL,
+  revision INT NOT NULL DEFAULT 1,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS munchy_media (
+  media_id VARCHAR(50) PRIMARY KEY,
+  payload MEDIUMBLOB NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

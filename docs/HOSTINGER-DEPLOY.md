@@ -1,118 +1,97 @@
-# Hostinger Deployment & Admin Security Guide (دليل النشر على هوستينجر والدخول للوحة التحكم)
+# Deploy Munchy on Hostinger Business
 
----
+Prepared 2026-11-17. No remote account was modified or live database tested during packaging.
 
-## 1. كيفاش تدخل لـ Admin وماتبانش للناس (How to Access the Hidden Admin Panel)
+## 1. The correct deployment
 
-> **Important**: The `/admin` link has been **completely removed** from all public visitor menus and footers. Regular customers browsing the website will never see or know about this link. In addition, `robots.txt` has been configured to disallow search engine crawlers from indexing `/admin`.
+Business Web Hosting supports managed Node.js web apps. The storefront and API run together as one Next.js app. Orders, catering leads, published content and uploaded images use MySQL. This architecture requires no separate Supabase, Firebase, VPS or backend subscription. Check your account's resource/database allowances; hosting itself remains paid.
 
-### أ) كيفاش كيدخل المدير / الشاف ديال الكوزينة (How the Owner Logs In):
-1. **كتب الرابط مباشرة فالمتصفح (Direct URL in Browser)**:
-   ```
-   https://your-domain.com/admin
-   ```
-   (أو محلياً: `http://localhost:3000/admin`)
+Use **Web App → Upload your files**. Ordinary File Manager extraction into `public_html` does not install dependencies, build Next.js or start its server. Keep source and secrets outside publicly served folders. File Manager edits to managed deployment directories may be overwritten on redeploy.
 
-2. **كلمة السر (Password)**:
-   - **محلياً (Development)**: كلمة السر الافتراضية هي:
-     ```
-     munchy-demo-2026
-     ```
-   - **على هوستينجر (Production on Hostinger)**:
-     كتحدد كلمة سر قوية وسرية فملف `.env` ديالك:
-     ```env
-     ADMIN_PASSWORD=MunchyCasa2026SecretK1tch3n!
-     ADMIN_SESSION_SECRET=a8f9c2d1e4b7890123456789abcdef0123456789abcdef0123456789abcdef01
-     ```
+[Official Hostinger Node.js deployment instructions](https://www.hostinger.com/support/how-to-deploy-a-nodejs-website-in-hostinger/)
 
-3. **الخصائص الجديدة لي زدنا فـ Kitchen Desk**:
-   - 🔔 **تنبيه صوتي (Sound Chime)**: فاش كيوصل شي طلب جديد، كيتسمع صوت جرس (Chime) نقي ومسموع باش الشاف يسمعو فالكوزينة بلا ما يبقى حاضي الشاشة.
-   - 📡 **تحديث تلقائي (Live Auto-refresh 20s)**: الصفحة كتحدث راسها كل 20 ثانية بلا ما تحتاج تكليكي على Refresh.
-   - 🖨️ **طبع البون (Thermal KOT Ticket Printing)**: كليك على زر **Print** فكل كوموند، كيطبع وصل مخصص ومضبوط للطابعات الحرارية (58mm / 80mm ESC/POS).
-   - 💬 **مراسلة الزبون فالواتساب بكليك واحد (WhatsApp Customer)**: زر كيديك نيشان للواتساب مع الزبون باش تسولو على العنوان أو تأكد معاه.
-   - 📥 **تحميل تقرير المبيعات (Export CSV)**: كليك على **Export CSV** باش تنزل ملف Excel/CSV فيه كاع الطلبات والمداخيل اليومية.
+## 2. Create the database
 
----
+1. In hPanel database management, create a MySQL database, user and strong password. Record full database/user names including Hostinger prefixes.
+2. Open phpMyAdmin for that database. Import `db/schema.sql` from the ZIP.
+3. Confirm four tables: `munchy_orders`, `munchy_catering_leads`, `munchy_content`, `munchy_media`.
+4. Use the exact MySQL hostname shown by hPanel. Use localhost only if specified by your connection details. If database access permissions are required for your managed Node app, follow Hostinger's configuration instructions rather than opening unrestricted database access.
 
-## 2. خطوات النشر على هوستينجر (Deployment Steps on Hostinger)
+Use a new database for first launch. The schema creates tables without dropping data. Back up existing databases before migrations. A new database initially uses the catalog included in source; publishing through admin stores edits in MySQL.
 
-سواء عندك **Hostinger VPS** أو **Hostinger Cloud / Node.js Application**، هاهي الخطوات بالتفصيل:
+[Create a MySQL database](https://www.hostinger.com/support/1583542-how-to-create-a-new-mysql-database-in-hostinger/) · [Import using phpMyAdmin](https://www.hostinger.com/support/1884149-how-to-import-a-database-with-phpmyadmin-in-hostinger/)
 
-### الخطوة 1: إعداد قاعدة البيانات MySQL في Hostinger hPanel
-1. دخل لـ **Hostinger hPanel** > **Databases** > **MySQL Databases**.
-2. أنشئ قاعدة بيانات جديدة:
-   - **Database Name**: e.g., `u123456789_munchy`
-   - **Username**: e.g., `u123456789_admin`
-   - **Password**: اختار كلمة سر قوية وسجلها عندك.
-3. دخل لـ **phpMyAdmin**، واختار قاعدة البيانات ديالك، وكليكي على **Import**.
-4. استورد ملف `db/schema.sql` الموجود فالمشروع ديالك. هاد الملف كينشئ الجداول:
-   - `munchy_orders` (طلبات الزبائن)
-   - `munchy_catering_leads` (طلبات التريتور والمناسبات)
-   *(جداول المحتوى `munchy_content` والصور `munchy_media` كيتنشؤو تلقائياً)*.
+## 3. Upload and build
 
----
+1. Websites → Create site → Web App under Business. Select your domain or a temporary domain. Test on a temporary domain before replacing an existing live site.
+2. Choose Upload your files; upload `munchy-hostinger-node.zip`. `package.json` is at the archive root.
+3. Framework: **Next.js with server/backend support**, rather than static export.
+4. Node: **22.x**. Package manager: **npm**. Root: `.`.
+5. Build: `npm run build`. Keep dependency installation enabled. If configurable, install with `npm ci --include=dev`; TypeScript, Tailwind and PostCSS are needed for building. Installing only production dependencies before building will fail.
+6. If output is requested, use `.next`. If start command is requested, use `npm run start`. Retain detected Next.js entry settings. Hostinger manages the process and port; no PM2 or fixed port 3000 is needed.
+7. Add environment variables before deployment. Deploy and check build logs. Use hPanel restart/redeploy after configuration changes.
 
-### الخطوة 2: رفع المشروع وإعداد ملف `.env`
-1. ارفع ملفات المشروع إلى السيرفر (عبر Git أو File Manager أو SSH).
-2. فالمجلد الرئيسي ديال المشروع، أنشئ ملف بسمية `.env` (أو عدل إعدادات البيئة في hPanel Node.js):
-   ```env
-   NODE_ENV=production
-   PORT=3000
+## 4. Private environment variables
 
-   # Database settings from Hostinger hPanel
-   DB_HOST=127.0.0.1
-   DB_PORT=3306
-   DB_NAME=u123456789_munchy
-   DB_USER=u123456789_admin
-   DB_PASSWORD=YourStrongDatabasePasswordHere
+Set these in hPanel Environment Variables. Never use NEXT_PUBLIC prefixes for credentials.
 
-   # Secret admin credentials (لا تشاركها مع أي شخص)
-   ADMIN_PASSWORD=YourCustomSecretAdminPassword2026!
-   ADMIN_SESSION_SECRET=c5f7e912a8435d023b18972f04acb679148d25167e9f3b821465a0b73c2e1f48
+| Variable | Value |
+| --- | --- |
+| NODE_ENV | production |
+| DB_HOST | MySQL hostname from hPanel |
+| DB_PORT | 3306 unless Hostinger specifies otherwise |
+| DB_NAME | Full prefixed database name |
+| DB_USER | Full prefixed database user |
+| DB_PASSWORD | Database password |
+| ADMIN_PASSWORD | Unique password of at least 16 characters |
+| ADMIN_SESSION_SECRET | Random secret of at least 64 characters |
+| MUNCHY_WHATSAPP_NUMBER | Real Moroccan mobile, digits only, starting 2126 or 2127 |
+| SITE_URL | Your HTTPS website origin without a subpath |
+| BUSINESS_VERIFIED | 0 for demo; 1 after publishing verified real business details |
 
-   # WhatsApp Business number (المغرب: 212 متبوعة برقمك بلا + ولا صفر)
-   MUNCHY_WHATSAPP_NUMBER=212600000000
-   ```
+Generate the session secret locally:
 
----
-
-### الخطوة 3: تثبيت الحزم وبناء المشروع (Build)
-عبر الـ Terminal / SSH في مجلد المشروع:
 ```bash
-# 1. تثبيت الحزم
-npm install --omit=dev
-
-# 2. بناء تطبيق Next.js
-npm run build
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ```
 
----
+Do not set `MUNCHY_FORCE_LOCAL_DATA`, `MUNCHY_TEST_BUILD_DIR` or `MUNCHY_LOCAL_DATA_DIR` in production. The local demo admin password is not a production credential. Production writes require the database.
 
-### الخطوة 4: تشغيل التطبيق بـ PM2
-المشروع مزود بملف جاهز `ecosystem.config.cjs`:
-```bash
-# تشغيل التطبيق في الخلفية
-pm2 start ecosystem.config.cjs
+If a terminal is available in the deployed app directory, run `npm run check:deploy` with the runtime environment loaded. It checks settings and tables without printing passwords. `/api/health` offers a browser-friendly readiness check.
 
-# جعله يشتغل تلقائياً عند إعادة تشغيل السيرفر
-pm2 save
-pm2 startup
-```
+## 5. Verify before taking orders
 
----
+1. Enable HTTPS. Admin sessions use secure cookies in production.
+2. Visit `/api/health`: expect HTTP 200 and `{"status":"ok"}`. HTTP 503 means configuration/database/schema needs attention.
+3. Sign in at `/admin`. Replace demo name, phone, email, address, hours, delivery zones/fees, prices, availability, ingredients and allergen details. Publish and reload.
+4. Replace concept space/team visuals and illustrative food photos with approved business assets when available. Keep concept labels while they remain illustrative. Confirm commercial image rights.
+5. Test mobile ordering with sauce, extra and two drinks; delivery and pickup; COD total; WhatsApp recipient; order reference and phone-protected tracking. The customer still presses Send in WhatsApp and the kitchen confirms acceptance.
+6. In admin, update the test order status and verify tracking. Test image upload, new product, price edit, catering inbox, CSV export and browser ticket printing.
+7. Restart/redeploy. Confirm orders, images and published content persist in MySQL.
+8. Check renamed/reordered/custom menu categories, French/Arabic switch, active-tab contrast and mobile cart.
+9. Adapt `/help` to actual business policies and customer-data retention practices before launch.
 
-### الخطوة 5: ربط الدومين وتفعيل شهادة SSL
-1. فـ Hostinger hPanel، تأكد أن الدومين ديالك (مثلاً `munchy.ma`) موجه للسيرفر.
-2. فعل شهادة الأمان المجانية **Let's Encrypt SSL** من تبويب **Security** فـ hPanel.
-3. دابا الموقع ديالك خدام رسمي ومحمي بـ HTTPS!
+## 6. Updates and backups
 
----
+Export a complete MySQL backup through phpMyAdmin before updates. It includes customer records, CMS content and uploaded images; store it privately. A CMS content export alone does not include all database/media records.
 
-## 3. ملخص التحسينات المنفذة (What was Implemented)
+Redeploy updated source ZIPs through the Node app's deployment settings. Avoid manual edits to managed `hbuilds` or `.htaccess`. Source redeployment does not reset MySQL. Code rollback does not undo database edits; keep source and database backups.
 
-1. **Kitchen Desk**: Auto-refresh كل 20 ثانية، تنبيه صوتي عند وصول طلب جديد، طبع البون الحراري KOT، زر مراسلة الزبون عبر واتساب، وتصدير الطلبات CSV.
-2. **Multi-Language Switcher**: دعم كامل لـ **الدارجة المغربية / العربية (AR)** و **الفرنسية (FR)** و **الإنجليزية (EN)** مع دعم اتجاه الكتابة من اليمين لليسار (RTL) وحفظ اللغة تلقائياً.
-3. **Checkout Conveniences**: حفظ تلقائي لمعلومات الزبون (الاسم، الهاتف، العنوان) فـ `localStorage` لتعبئتها بضغطة زر فكل طلب لاحق + إمكانية استبدال 100 نقطة بخصم 10 دراهم + مؤشر ساعات العمل الحية لكازابلانكا.
-4. **PWA & Local SEO**: ملف `manifest.json`، أيقونة التطبيق `icon.svg`، وإعدادات Schema.org JSON-LD الخاصة بمطاعم الوجبات السريعة فالمعاريف كازابلانكا لظهور الموقع في بحث Google المحلي.
-5. **إخفاء صفحة الإدارة**: إزالة أي رابط لـ `/admin` من واجهة الزبائن وحظر الأرشفة في `robots.txt`.
-6. **تنظيم المشروع**: تنظيف المجلد الرئيسي ونقل كافة السكربتات المؤقتة إلى `scripts/` وتهيئة Git.
+This release intentionally excludes local `.data` customer records and uploads. Existing local content edits are not automatically migrated. The packaged source catalog is the initial database fallback.
+
+## 7. Troubleshooting
+
+- Build fails: verify Node 22, dev dependencies during build, and build logs. Next's Google font build step requires network access. Do not upload Windows `node_modules` or `.next`.
+- Health 503: check DB/admin settings, database access and all four schema tables; inspect runtime logs privately.
+- Admin login fails: check HTTPS and production credentials. Clear stale cookies after session-secret rotation.
+- Wrong WhatsApp destination: configure MUNCHY_WHATSAPP_NUMBER and update published contact details.
+- Orders appear missing: verify DB_NAME still points to the original database. Local JSON storage is development-only.
+- Only PHP files are shown: create a Web App under Business; a PHP directory is not a Node runtime.
+
+## 8. Scope
+
+COD ordering, admin editing, catering, tracking polling and WhatsApp handoff are implemented. Customer accounts, verified redeemable rewards, card payments, live driver GPS, delivery dispatch, automatic WhatsApp Business notifications and offline checkout are not implemented.
+
+French/Arabic translate many UI strings; some copy remains English and custom CMS text needs editorial translation. The manifest supplies app metadata, not an offline service worker. Tickets use the browser/OS print dialog, not native ESC/POS.
+
+See [release audit](RELEASE-AUDIT.md) for the requirement matrix and validation results.

@@ -45,6 +45,7 @@ export function getPool() {
     waitForConnections: true,
     queueLimit: 20,
     charset: 'utf8mb4',
+    timezone: 'Z',
   });
   return pool;
 }
@@ -66,7 +67,7 @@ export async function createOrder(order: OrderRecord) {
     await getPool().execute(
       `INSERT INTO munchy_orders (order_code, customer_name, customer_phone, delivery_address, location_url, items_json, fulfillment_method, payment_method, change_for, subtotal, delivery_fee, total, status, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [order.code, order.name, order.phone, order.address, order.locationUrl || null, JSON.stringify(order.items), order.fulfillment, order.payment, order.changeFor, order.subtotal, order.deliveryFee, order.total, order.status, order.createdAt],
+      [order.code, order.name, order.phone, order.address, order.locationUrl || null, JSON.stringify(order.items), order.fulfillment, order.payment, order.changeFor, order.subtotal, order.deliveryFee, order.total, order.status, new Date(order.createdAt)],
     );
     return;
   }
@@ -132,7 +133,7 @@ export async function createCateringLead(lead: CateringLead) {
   if (hasDatabaseConfig()) {
     await getPool().execute(
       'INSERT INTO munchy_catering_leads (lead_id, customer_name, customer_phone, customer_email, event_type, event_date, guest_count, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [lead.id, lead.name, lead.phone, lead.email, lead.eventType, lead.eventDate || null, lead.guests, lead.note, lead.createdAt],
+      [lead.id, lead.name, lead.phone, lead.email, lead.eventType, lead.eventDate || null, lead.guests, lead.note, new Date(lead.createdAt)],
     );
     return;
   }
